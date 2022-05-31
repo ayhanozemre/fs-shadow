@@ -1,4 +1,5 @@
-module walker
+module github.com/ayhanozemre/fs-shadow
+
 
 go 1.18
 

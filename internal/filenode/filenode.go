@@ -2,12 +2,12 @@ package filenode
 
 import (
 	"errors"
+	"github.com/ayhanozemre/fs-shadow/utils"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
 	"sync"
-	"walker/utils"
 )
 
 func (fn *FileNode) Remove(path string) error {
@@ -41,6 +41,7 @@ func (fn *FileNode) Update(path string, absolutePath string) error {
 	return nil
 }
 
+// bu method fs'e depend, refactor.
 func (fn *FileNode) Create(path string, absolutePath string, ch chan string) error {
 	sum, err := utils.Sum(absolutePath)
 	if err != nil {
@@ -79,6 +80,7 @@ func (fn *FileNode) SumUpdate(absolutePath string) error {
 	return nil
 }
 
+//refactor
 func (fn *FileNode) Search(path string) *FileNode {
 	pathExp := strings.Split(path, "/")
 	if fn.Name == pathExp[0] && len(pathExp) == 1 {
@@ -96,6 +98,21 @@ func (fn *FileNode) Search(path string) *FileNode {
 			}
 		}
 	}
+	return nil
+}
+
+func (fn *FileNode) JsonImport() error {
+
+	return nil
+}
+
+func (fn *FileNode) JsonExport() error {
+
+	return nil
+}
+
+func (fn *FileNode) JsonUpdate() error {
+
 	return nil
 }
 

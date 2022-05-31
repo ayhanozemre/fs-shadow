@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	filenode "github.com/ayhanozemre/fs-shadow/internal/filenode"
+	"github.com/ayhanozemre/fs-shadow/utils"
 	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
 	"sync"
-	filenode "walker/internal/filenode"
-	"walker/utils"
 )
 
 type Event struct {
