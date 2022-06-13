@@ -3,8 +3,11 @@ package filenode
 import "github.com/fsnotify/fsnotify"
 
 type MetaData struct {
-	IsDir bool   `json:"is_dir"`
-	Sum   string `json:"sum"`
+	IsDir      bool   `json:"is_dir"`
+	Sum        string `json:"sum"`
+	Size       int64  `json:"size"`
+	CreatedAt  int64  `json:"createdAt"`
+	Permission string `json:"permission"`
 }
 
 type FileNode struct {

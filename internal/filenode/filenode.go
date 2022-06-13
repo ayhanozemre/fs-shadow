@@ -1,7 +1,9 @@
 package filenode
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/ayhanozemre/fs-shadow/utils"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -10,6 +12,10 @@ import (
 	"sync"
 )
 
+/*
+	fileNode'n kullandigi path type kesinlikle fs'e bagli bir islem yapmamali.
+	yeni bir Path type olusturulmali VPath gibi... burada fs'e depend olunmamali.
+*/
 func (fn *FileNode) Remove(path string) error {
 	tPath := utils.Path(path)
 	fileName := tPath.Name()
@@ -52,7 +58,7 @@ func (fn *FileNode) Create(path string, absolutePath string, ch chan string) err
 	parentNode := fn.Search(eventPath.ParentPath())
 	if parentNode == nil {
 		var wg sync.WaitGroup
-		WalkOnPath(fn, absolutePath, &wg, ch)
+		WalkOnFsPath(fn, absolutePath, &wg, ch)
 		wg.Wait()
 		return nil
 	}
@@ -60,12 +66,15 @@ func (fn *FileNode) Create(path string, absolutePath string, ch chan string) err
 	meta := MetaData{
 		IsDir: aPath.IsDir(),
 		Sum:   sum,
+		//Size:       aPath.Size(),
+		//CreatedAt:  aPath.ModTime(),
+		//Permission: aPath.Mode(),
 	}
 	node := FileNode{Name: eventPath.Name(), Meta: meta}
 	parentNode.Subs = append(parentNode.Subs, &node)
 	if aPath.IsDir() {
 		var wg sync.WaitGroup
-		WalkOnPath(&node, absolutePath, &wg, ch)
+		WalkOnFsPath(&node, absolutePath, &wg, ch)
 		wg.Wait()
 	}
 	return nil
@@ -80,35 +89,49 @@ func (fn *FileNode) SumUpdate(absolutePath string) error {
 	return nil
 }
 
-//refactor
 func (fn *FileNode) Search(path string) *FileNode {
 	pathExp := strings.Split(path, "/")
 	if fn.Name == pathExp[0] && len(pathExp) == 1 {
 		return fn
 	}
-	newPath := filepath.Join(pathExp[1:]...)
-	// goroutinelerle calismasi lazim
 	if fn.Name == pathExp[0] {
 		if len(pathExp) != 1 {
+			newPath := filepath.Join(pathExp[1:]...)
+			var wg sync.WaitGroup
+			var wantedNode *FileNode
 			for _, sub := range fn.Subs {
-				node := sub.Search(newPath)
-				if node != nil {
-					return node
-				}
+				wg.Add(1)
+				go func(sub *FileNode) {
+					node := sub.Search(newPath)
+					if node != nil {
+						wantedNode = node
+					}
+					wg.Done()
+				}(sub)
+			}
+			wg.Wait()
+			if wantedNode != nil {
+				return wantedNode
 			}
 		}
 	}
 	return nil
 }
 
-func (fn *FileNode) JsonImport() error {
+func (fn *FileNode) JsonImport(tree string) error {
+	/*
+		{"file", "op"}
 
+	*/
 	return nil
 }
 
-func (fn *FileNode) JsonExport() error {
-
-	return nil
+func (fn *FileNode) JsonExport() (string, error) {
+	dump, err := json.Marshal(fn)
+	if err != nil {
+		return "", err
+	}
+	return string(dump), nil
 }
 
 func (fn *FileNode) JsonUpdate() error {
@@ -116,20 +139,26 @@ func (fn *FileNode) JsonUpdate() error {
 	return nil
 }
 
-func WalkOnPath(root *FileNode, absolutePath string, wg *sync.WaitGroup, ch chan string) {
+func WalkOnFsPath(root *FileNode, absolutePath string, wg *sync.WaitGroup, ch chan string) {
 	ch <- absolutePath
 	files, _ := ioutil.ReadDir(absolutePath)
 	for _, path := range files {
 		newAbsolutePath := filepath.Join(absolutePath, path.Name())
+		mode := fmt.Sprintf("%d", path.Mode())
+
 		sum, err := utils.Sum(newAbsolutePath)
 		if err != nil {
 			log.Error("sum error:", newAbsolutePath)
 		}
+
 		newNode := FileNode{
 			Name: path.Name(),
 			Meta: MetaData{
-				IsDir: path.IsDir(),
-				Sum:   sum,
+				IsDir:      path.IsDir(),
+				Sum:        sum,
+				Size:       path.Size(),
+				CreatedAt:  path.ModTime().Unix(),
+				Permission: mode,
 			},
 		}
 		root.Subs = append(root.Subs, &newNode)
@@ -138,7 +167,7 @@ func WalkOnPath(root *FileNode, absolutePath string, wg *sync.WaitGroup, ch chan
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				WalkOnPath(&newNode, newAbsolutePath, wg, ch)
+				WalkOnFsPath(&newNode, newAbsolutePath, wg, ch)
 				return
 			}()
 		}
