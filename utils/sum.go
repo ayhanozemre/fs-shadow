@@ -3,20 +3,21 @@ package utils
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"github.com/ayhanozemre/fs-shadow/connector"
 	"io"
 	"os"
 )
 
-func Sum(path string) (string, error) {
-	p := Path(path)
-	if p.IsDir() {
+func Sum(path connector.Path) (string, error) {
+	if path.IsDir() {
 		// folder sum is not necessary for now, but it should be here as an idea.
-		return FolderSum(p.String())
+		return FolderSum(path.String())
 	}
-	return FileSum(p.String())
+	return FileSum(path.String())
 }
 
 func FolderSum(path string) (string, error) {
+	// sum of sums of sub folders can be hashed
 	return "", nil
 }
 

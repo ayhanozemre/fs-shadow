@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ayhanozemre/fs-shadow/connector"
 	"github.com/ayhanozemre/fs-shadow/utils"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -12,14 +13,9 @@ import (
 	"sync"
 )
 
-/*
-	fileNode'n kullandigi path type kesinlikle fs'e bagli bir islem yapmamali.
-	yeni bir Path type olusturulmali VPath gibi... burada fs'e depend olunmamali.
-*/
-func (fn *FileNode) Remove(path string) error {
-	tPath := utils.Path(path)
-	fileName := tPath.Name()
-	node := fn.Search(tPath.ParentPath())
+func (fn *FileNode) Remove(absolutePath connector.Path) error {
+	fileName := absolutePath.Name()
+	node := fn.Search(absolutePath.ParentPath().String())
 	if node == nil {
 		return errors.New("FileNode not found")
 	}
@@ -35,8 +31,8 @@ func (fn *FileNode) Remove(path string) error {
 	return nil
 }
 
-func (fn *FileNode) Update(path string, absolutePath string) error {
-	node := fn.Search(path)
+func (fn *FileNode) Update(treePath connector.Path, absolutePath connector.Path) error {
+	node := fn.Search(treePath.String())
 	if node == nil {
 		return errors.New("FileNode not found")
 	}
@@ -47,15 +43,13 @@ func (fn *FileNode) Update(path string, absolutePath string) error {
 	return nil
 }
 
-// bu method fs'e depend, refactor.
-func (fn *FileNode) Create(path string, absolutePath string, ch chan string) error {
+func (fn *FileNode) Create(path connector.Path, absolutePath connector.Path, ch chan connector.Path) error {
 	sum, err := utils.Sum(absolutePath)
 	if err != nil {
 		return err
 	}
-	eventPath := utils.Path(path)
-	aPath := utils.Path(absolutePath)
-	parentNode := fn.Search(eventPath.ParentPath())
+
+	parentNode := fn.Search(path.ParentPath().String())
 	if parentNode == nil {
 		var wg sync.WaitGroup
 		WalkOnFsPath(fn, absolutePath, &wg, ch)
@@ -64,15 +58,15 @@ func (fn *FileNode) Create(path string, absolutePath string, ch chan string) err
 	}
 
 	meta := MetaData{
-		IsDir: aPath.IsDir(),
+		IsDir: absolutePath.IsDir(),
 		Sum:   sum,
 		//Size:       aPath.Size(),
 		//CreatedAt:  aPath.ModTime(),
 		//Permission: aPath.Mode(),
 	}
-	node := FileNode{Name: eventPath.Name(), Meta: meta}
+	node := FileNode{Name: path.Name(), Meta: meta}
 	parentNode.Subs = append(parentNode.Subs, &node)
-	if aPath.IsDir() {
+	if absolutePath.IsDir() {
 		var wg sync.WaitGroup
 		WalkOnFsPath(&node, absolutePath, &wg, ch)
 		wg.Wait()
@@ -80,7 +74,7 @@ func (fn *FileNode) Create(path string, absolutePath string, ch chan string) err
 	return nil
 }
 
-func (fn *FileNode) SumUpdate(absolutePath string) error {
+func (fn *FileNode) SumUpdate(absolutePath connector.Path) error {
 	sum, err := utils.Sum(absolutePath)
 	if err != nil {
 		return err
@@ -139,11 +133,11 @@ func (fn *FileNode) JsonUpdate() error {
 	return nil
 }
 
-func WalkOnFsPath(root *FileNode, absolutePath string, wg *sync.WaitGroup, ch chan string) {
+func WalkOnFsPath(root *FileNode, absolutePath connector.Path, wg *sync.WaitGroup, ch chan connector.Path) {
 	ch <- absolutePath
-	files, _ := ioutil.ReadDir(absolutePath)
+	files, _ := ioutil.ReadDir(absolutePath.String())
 	for _, path := range files {
-		newAbsolutePath := filepath.Join(absolutePath, path.Name())
+		newAbsolutePath := connector.NewFSPath(filepath.Join(absolutePath.String(), path.Name()))
 		mode := fmt.Sprintf("%d", path.Mode())
 
 		sum, err := utils.Sum(newAbsolutePath)

@@ -1,6 +1,9 @@
 package filenode
 
-import "github.com/fsnotify/fsnotify"
+import (
+	"github.com/ayhanozemre/fs-shadow/connector"
+	"github.com/fsnotify/fsnotify"
+)
 
 type MetaData struct {
 	IsDir      bool   `json:"is_dir"`
@@ -17,7 +20,7 @@ type FileNode struct {
 }
 
 type FileTree struct {
-	Path    string
+	Path    connector.Path
 	Tree    *FileNode
 	Watcher *fsnotify.Watcher
 }

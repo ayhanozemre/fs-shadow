@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	filenode "github.com/ayhanozemre/fs-shadow/internal/filenode"
-	"github.com/ayhanozemre/fs-shadow/utils"
+	"github.com/ayhanozemre/fs-shadow/connector"
+	"github.com/ayhanozemre/fs-shadow/filenode"
 	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
 	"sync"
@@ -20,8 +20,8 @@ type Event struct {
 type TreeWatcher struct {
 	FileTree   *filenode.FileNode
 	Watcher    *fsnotify.Watcher
-	Path       string
-	ParentPath string
+	Path       connector.Path
+	ParentPath connector.Path
 
 	Events chan Event // bu channel'i servislere verecegiz. not implemented
 	sync.Mutex
@@ -43,7 +43,7 @@ func (tw *TreeWatcher) Close() {
 	}
 }
 
-func (tw *TreeWatcher) Remove(path utils.Path) error {
+func (tw *TreeWatcher) Remove(path connector.Path) error {
 	eventPath := path.ExcludePath(tw.ParentPath)
 	err := tw.FileTree.Remove(eventPath)
 	if err == nil && path.IsDir() {
@@ -55,31 +55,30 @@ func (tw *TreeWatcher) Remove(path utils.Path) error {
 	return err
 }
 
-func (tw *TreeWatcher) Write(path utils.Path) error {
+func (tw *TreeWatcher) Write(path connector.Path) error {
 	if !path.IsDir() {
 		eventPath := path.ExcludePath(tw.ParentPath)
-		err := tw.FileTree.Update(eventPath, path.String())
+		err := tw.FileTree.Update(eventPath, path)
 		return err
 	}
 	return nil
 }
 
-func (tw *TreeWatcher) Create(path utils.Path) error {
+func (tw *TreeWatcher) Create(path connector.Path) error {
 	if !path.Exists() {
 		return errors.New("file path does not exist")
 	}
 
 	eventPath := path.ExcludePath(tw.ParentPath)
-	eventCh := make(chan string)
+	eventCh := make(chan connector.Path)
 
 	go func() {
 		for {
 			select {
 			case p := <-eventCh:
-				if p != "" {
-					newFile := utils.Path(p)
-					if newFile.IsDir() {
-						err := tw.Watcher.Add(p)
+				if p != nil {
+					if p.IsDir() {
+						err := tw.Watcher.Add(p.String())
 						if err != nil {
 							fmt.Println("create error", err)
 							return
@@ -92,13 +91,13 @@ func (tw *TreeWatcher) Create(path utils.Path) error {
 		}
 	}()
 
-	err := tw.FileTree.Create(eventPath, path.String(), eventCh)
-	eventCh <- ""
+	err := tw.FileTree.Create(eventPath, path, eventCh)
+	eventCh <- nil
 	close(eventCh)
 	return err
 }
 
-func (tw *TreeWatcher) Rename(path utils.Path) error {
+func (tw *TreeWatcher) Rename(path connector.Path) error {
 	if !path.Exists() {
 		return tw.Remove(path)
 	}
@@ -112,7 +111,12 @@ func (tw *TreeWatcher) EventHandler(op fsnotify.Op, path string) (err error) {
 	if op == fsnotify.Chmod {
 		return nil
 	}
-	pathIns := utils.Path(path)
+	var pathIns connector.Path
+	if tw.Path.IsVirtual() {
+		pathIns = connector.NewVirtualPath(path)
+	} else {
+		pathIns = connector.NewFSPath(path)
+	}
 
 	switch op {
 	case fsnotify.Remove:
@@ -138,8 +142,10 @@ func (tw *TreeWatcher) Watch() {
 			}
 			err := tw.EventHandler(event.Op, event.Name)
 			if err != nil {
+				// event channel update
 				fmt.Println(err)
 			} else {
+				// event channel update
 				tw.PrintTree("EVENT MANAGER")
 			}
 		case err, ok := <-tw.Watcher.Errors:
@@ -156,15 +162,20 @@ func (tw *TreeWatcher) Start() {
 	go tw.Watch()
 }
 
-func NewPathWatcher(path utils.Path) (*TreeWatcher, error) {
+func NewPathWatcher(path connector.Path) (*TreeWatcher, error) {
 	if !path.IsDir() {
 		err := errors.New("input path is not directory")
 		return nil, err
 	}
 
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return nil, err
+	var err error
+	var watcher *fsnotify.Watcher
+
+	if !path.IsVirtual() {
+		watcher, err = fsnotify.NewWatcher()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	root := filenode.FileNode{
@@ -176,8 +187,8 @@ func NewPathWatcher(path utils.Path) (*TreeWatcher, error) {
 
 	tw := TreeWatcher{
 		FileTree:   &root,
-		ParentPath: path.ParentPath(),
-		Path:       path.String(),
+		ParentPath: path,
+		Path:       path,
 		Watcher:    watcher,
 	}
 	err = tw.Create(path)
@@ -189,7 +200,7 @@ func NewPathWatcher(path utils.Path) (*TreeWatcher, error) {
 }
 
 func main() {
-	input := utils.Path("/home/wade/Desktop/TransferChain")
+	input := connector.NewFSPath("/home/wade/Desktop/TransferChain")
 	tw, err := NewPathWatcher(input)
 	fmt.Println("err->", err)
 	tw.PrintTree("INIT TREE")
