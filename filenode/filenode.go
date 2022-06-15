@@ -44,9 +44,13 @@ func (fn *FileNode) Update(treePath connector.Path, absolutePath connector.Path)
 }
 
 func (fn *FileNode) Create(path connector.Path, absolutePath connector.Path, ch chan connector.Path) error {
-	sum, err := utils.Sum(absolutePath)
-	if err != nil {
-		return err
+	var sum string
+	var err error
+	if !absolutePath.IsVirtual() {
+		sum, err = utils.Sum(absolutePath)
+		if err != nil {
+			return err
+		}
 	}
 
 	parentNode := fn.Search(path.ParentPath().String())

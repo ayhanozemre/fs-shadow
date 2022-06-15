@@ -163,15 +163,14 @@ func (tw *TreeWatcher) Start() {
 }
 
 func NewPathWatcher(path connector.Path) (*TreeWatcher, error) {
-	if !path.IsDir() {
-		err := errors.New("input path is not directory")
-		return nil, err
-	}
-
 	var err error
 	var watcher *fsnotify.Watcher
 
 	if !path.IsVirtual() {
+		if !path.IsDir() {
+			err := errors.New("input path is not directory")
+			return nil, err
+		}
 		watcher, err = fsnotify.NewWatcher()
 		if err != nil {
 			return nil, err
