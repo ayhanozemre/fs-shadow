@@ -8,4 +8,12 @@ type Path interface {
 	String() string
 	ParentPath() Path
 	ExcludePath(p Path) Path
+	Info() *FileInfo
+}
+
+type FileInfo struct {
+	IsDir      bool
+	Size       int64
+	CreatedAt  int64
+	Permission string
 }

@@ -1,7 +1,6 @@
 package connector
 
 import (
-	"os"
 	"strings"
 )
 
@@ -18,18 +17,15 @@ func (path VirtualPath) IsVirtual() bool {
 }
 
 func (path VirtualPath) IsDir() bool {
-	fInfo, ok := os.Stat(path.String())
-	if ok != nil {
-		return false
-	}
-	return fInfo.IsDir()
+	return false
+}
+
+func (path VirtualPath) Info() *FileInfo {
+	return nil
 }
 
 func (path *VirtualPath) Exists() bool {
-	if _, err := os.Stat(path.String()); os.IsNotExist(err) {
-		return false
-	}
-	return true
+	return false
 }
 
 func (path *VirtualPath) Name() string {

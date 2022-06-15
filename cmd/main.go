@@ -187,7 +187,7 @@ func NewPathWatcher(path connector.Path) (*TreeWatcher, error) {
 
 	tw := TreeWatcher{
 		FileTree:   &root,
-		ParentPath: path,
+		ParentPath: path.ParentPath(),
 		Path:       path,
 		Watcher:    watcher,
 	}

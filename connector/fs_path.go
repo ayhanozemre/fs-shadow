@@ -1,6 +1,7 @@
 package connector
 
 import (
+	"fmt"
 	"os"
 	"strings"
 )
@@ -23,6 +24,16 @@ func (path FSPath) IsDir() bool {
 		return false
 	}
 	return fInfo.IsDir()
+}
+
+func (path *FSPath) Info() *FileInfo {
+	p, _ := os.Stat(path.String())
+	return &FileInfo{
+		IsDir:      p.IsDir(),
+		Size:       p.Size(),
+		CreatedAt:  p.ModTime().Unix(),
+		Permission: fmt.Sprintf("%d", p.Mode()),
+	}
 }
 
 func (path *FSPath) Exists() bool {

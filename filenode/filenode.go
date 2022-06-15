@@ -57,12 +57,13 @@ func (fn *FileNode) Create(path connector.Path, absolutePath connector.Path, ch 
 		return nil
 	}
 
+	absolutePathInfo := absolutePath.Info()
 	meta := MetaData{
-		IsDir: absolutePath.IsDir(),
-		Sum:   sum,
-		//Size:       aPath.Size(),
-		//CreatedAt:  aPath.ModTime(),
-		//Permission: aPath.Mode(),
+		IsDir:      absolutePath.IsDir(),
+		Sum:        sum,
+		Size:       absolutePathInfo.Size,
+		CreatedAt:  absolutePathInfo.CreatedAt,
+		Permission: absolutePathInfo.Permission,
 	}
 	node := FileNode{Name: path.Name(), Meta: meta}
 	parentNode.Subs = append(parentNode.Subs, &node)
