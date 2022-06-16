@@ -55,9 +55,11 @@ func (fn *FileNode) Create(path connector.Path, absolutePath connector.Path, ch 
 
 	parentNode := fn.Search(path.ParentPath().String())
 	if parentNode == nil {
-		var wg sync.WaitGroup
-		WalkOnFsPath(fn, absolutePath, &wg, ch)
-		wg.Wait()
+		if !path.IsVirtual() {
+			var wg sync.WaitGroup
+			WalkOnFsPath(fn, absolutePath, &wg, ch)
+			wg.Wait()
+		}
 		return nil
 	}
 
@@ -71,7 +73,7 @@ func (fn *FileNode) Create(path connector.Path, absolutePath connector.Path, ch 
 	}
 	node := FileNode{Name: path.Name(), Meta: meta}
 	parentNode.Subs = append(parentNode.Subs, &node)
-	if absolutePath.IsDir() {
+	if absolutePath.IsDir() && !absolutePath.IsVirtual() {
 		var wg sync.WaitGroup
 		WalkOnFsPath(&node, absolutePath, &wg, ch)
 		wg.Wait()

@@ -5,11 +5,12 @@ import (
 )
 
 type VirtualPath struct {
-	p string
+	p     string
+	isDir bool
 }
 
-func NewVirtualPath(p string) *VirtualPath {
-	return &VirtualPath{p: p}
+func NewVirtualPath(p string, isDir bool) *VirtualPath {
+	return &VirtualPath{p: p, isDir: isDir}
 }
 
 func (path VirtualPath) IsVirtual() bool {
@@ -17,15 +18,15 @@ func (path VirtualPath) IsVirtual() bool {
 }
 
 func (path VirtualPath) IsDir() bool {
-	return false
+	return path.isDir
 }
 
 func (path VirtualPath) Info() *FileInfo {
-	return nil
+	return &FileInfo{}
 }
 
 func (path *VirtualPath) Exists() bool {
-	return false
+	return true
 }
 
 func (path *VirtualPath) Name() string {
@@ -41,11 +42,11 @@ func (path *VirtualPath) String() string {
 func (path *VirtualPath) ParentPath() Path {
 	parts := strings.Split(path.String(), "/")
 	absolutePath := strings.Join(parts[:len(parts)-1], "/")
-	return NewVirtualPath(absolutePath)
+	return NewVirtualPath(absolutePath, true)
 }
 
 func (path *VirtualPath) ExcludePath(excPath Path) Path {
 	eventAbsolutePath := strings.ReplaceAll(path.String(), excPath.String(), "")
 	eventAbsolutePath = strings.Trim(eventAbsolutePath, "/")
-	return NewVirtualPath(eventAbsolutePath)
+	return NewVirtualPath(eventAbsolutePath, path.IsDir())
 }

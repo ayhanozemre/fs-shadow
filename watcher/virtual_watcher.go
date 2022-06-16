@@ -1,19 +1,82 @@
 package watcher
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/ayhanozemre/fs-shadow/connector"
 	"github.com/ayhanozemre/fs-shadow/filenode"
-	"github.com/fsnotify/fsnotify"
+	"sync"
 )
 
-func NewVirtualPathWatcher(fs_path string) (*TreeWatcher, error) {
-	var err error
-	path := connector.NewVirtualPath(fs_path)
+type VirtualTree struct {
+	FileTree   *filenode.FileNode
+	Path       connector.Path
+	ParentPath connector.Path
 
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return nil, err
+	sync.Mutex
+}
+
+func (tw *VirtualTree) PrintTree(label string) {
+	bannerStartLine := fmt.Sprintf("----------------%s-----------------------", label)
+	bannerEndLine := fmt.Sprintf("----------------%s-----------------------\n\n", label)
+	fmt.Println(bannerStartLine)
+	a, _ := json.Marshal(tw.FileTree)
+	fmt.Println(string(a))
+	fmt.Println(bannerEndLine)
+}
+
+func (tw *VirtualTree) Create(path connector.Path) error {
+	tw.Lock()
+	defer tw.Unlock()
+	if !path.Exists() {
+		return errors.New("file path does not exist")
 	}
+
+	eventPath := path.ExcludePath(tw.ParentPath)
+	eventCh := make(chan connector.Path)
+	go func() {
+		for {
+			select {
+			case p := <-eventCh:
+				if p != nil {
+					//
+				}
+			}
+		}
+	}()
+	err := tw.FileTree.Create(eventPath, path, eventCh)
+	close(eventCh)
+	return err
+}
+
+func (tw *VirtualTree) Remove(path connector.Path) error {
+	tw.Lock()
+	defer tw.Unlock()
+	eventPath := path.ExcludePath(tw.ParentPath)
+	err := tw.FileTree.Remove(eventPath)
+	return err
+}
+
+func (tw *VirtualTree) Write(path connector.Path) error {
+	// maybe we can generate the sum for vfs
+	return nil
+}
+
+func (tw *VirtualTree) Close() {
+}
+
+func (tw *VirtualTree) Rename(path connector.Path) error {
+	tw.Lock()
+	defer tw.Unlock()
+	if !path.Exists() {
+		return tw.Remove(path)
+	}
+	return nil
+}
+
+func NewVirtualPathWatcher(virtualPath string) (*VirtualTree, error) {
+	path := connector.NewVirtualPath(virtualPath, true)
 
 	root := filenode.FileNode{
 		Name: path.Name(),
@@ -22,16 +85,14 @@ func NewVirtualPathWatcher(fs_path string) (*TreeWatcher, error) {
 		},
 	}
 
-	tw := TreeWatcher{
+	tw := VirtualTree{
 		FileTree:   &root,
 		ParentPath: path.ParentPath(),
 		Path:       path,
-		Watcher:    watcher,
 	}
-	err = tw.Create(path)
+	err := tw.Create(path)
 	if err != nil {
 		return nil, err
 	}
-	tw.Start()
 	return &tw, nil
 }

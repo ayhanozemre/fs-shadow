@@ -111,12 +111,7 @@ func (tw *TreeWatcher) EventHandler(op fsnotify.Op, path string) (err error) {
 	if op == fsnotify.Chmod {
 		return nil
 	}
-	var pathIns connector.Path
-	if tw.Path.IsVirtual() {
-		pathIns = connector.NewVirtualPath(path)
-	} else {
-		pathIns = connector.NewFSPath(path)
-	}
+	pathIns := connector.NewFSPath(path)
 
 	switch op {
 	case fsnotify.Remove:
@@ -162,10 +157,10 @@ func (tw *TreeWatcher) Start() {
 	go tw.Watch()
 }
 
-func NewFSPathWatcher(fs_path string) (*TreeWatcher, error) {
+func NewFSPathWatcher(fsPath string) (*TreeWatcher, error) {
 	var err error
 	var watcher *fsnotify.Watcher
-	path := connector.NewFSPath(fs_path)
+	path := connector.NewFSPath(fsPath)
 	if !path.IsDir() {
 		err = errors.New("input path is not directory")
 		return nil, err
