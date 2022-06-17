@@ -141,7 +141,8 @@ func (tw *TreeWatcher) Watch() {
 				fmt.Println(err)
 			} else {
 				// event channel update
-				tw.PrintTree("EVENT MANAGER")
+				//tw.PrintTree("EVENT MANAGER")
+				fmt.Println(event.String())
 			}
 		case err, ok := <-tw.Watcher.Errors:
 			if !ok {

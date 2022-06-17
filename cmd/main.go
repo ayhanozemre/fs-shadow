@@ -6,8 +6,8 @@ import (
 )
 
 func main() {
-	//tw, err := watcher.NewFSPathWatcher("/home/wade/Desktop/TransferChain")
-	tw, err := watcher.NewVirtualPathWatcher("/home/wade/Desktop/TransferChain")
+	tw, err := watcher.NewFSPathWatcher("/tmp/fs-shadow-test")
+	//tw, err := watcher.NewVirtualPathWatcher("/home/wade/Desktop/TransferChain")
 
 	if err == nil {
 		tw.PrintTree("INIT TREE")
