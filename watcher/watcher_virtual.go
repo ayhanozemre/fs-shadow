@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ayhanozemre/fs-shadow/connector"
 	"github.com/ayhanozemre/fs-shadow/filenode"
+	"github.com/ayhanozemre/fs-shadow/path"
 	"sync"
 )
 

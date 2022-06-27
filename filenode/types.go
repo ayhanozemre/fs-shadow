@@ -1,7 +1,7 @@
 package filenode
 
 import (
-	"github.com/ayhanozemre/fs-shadow/connector"
+	"github.com/ayhanozemre/fs-shadow/path"
 	"github.com/fsnotify/fsnotify"
 )
 

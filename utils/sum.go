@@ -3,7 +3,7 @@ package utils
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/ayhanozemre/fs-shadow/connector"
+	"github.com/ayhanozemre/fs-shadow/path"
 	"io"
 	"os"
 )

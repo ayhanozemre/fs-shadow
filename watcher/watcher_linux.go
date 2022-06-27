@@ -4,18 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ayhanozemre/fs-shadow/connector"
 	"github.com/ayhanozemre/fs-shadow/filenode"
+	"github.com/ayhanozemre/fs-shadow/path"
 	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
 	"sync"
+	"time"
 )
-
-type Event struct {
-	Path  string
-	Op    string
-	Error error
-}
 
 type TreeWatcher struct {
 	FileTree   *filenode.FileNode
@@ -25,6 +20,7 @@ type TreeWatcher struct {
 
 	Events chan Event // bu channel'i servislere verecegiz. not implemented
 	sync.Mutex
+	EventManager *EventManager
 }
 
 func (tw *TreeWatcher) PrintTree(label string) {
@@ -104,26 +100,24 @@ func (tw *TreeWatcher) Rename(path connector.Path) error {
 	return nil
 }
 
-func (tw *TreeWatcher) EventHandler(op fsnotify.Op, path string) (err error) {
+func (tw *TreeWatcher) EventHandler(op EventType, path string) (err error) {
 	tw.Lock()
 	defer tw.Unlock()
 
-	if op == fsnotify.Chmod {
-		return nil
-	}
 	pathIns := connector.NewFSPath(path)
 
 	switch op {
-	case fsnotify.Remove:
+	case Remove:
 		err = tw.Remove(pathIns)
-	case fsnotify.Write:
+	case Write:
 		err = tw.Write(pathIns)
-	case fsnotify.Create:
+	case Create:
 		err = tw.Create(pathIns)
-	case fsnotify.Rename:
+	case Rename:
 		err = tw.Rename(pathIns)
 	default:
-		return errors.New("unhandled event")
+		errorMsg := fmt.Sprintf("un handled event: op:%s, path:%s", op.String(), path)
+		return errors.New(errorMsg)
 	}
 	return nil
 }
@@ -135,14 +129,20 @@ func (tw *TreeWatcher) Watch() {
 			if !ok {
 				return
 			}
-			err := tw.EventHandler(event.Op, event.Name)
-			if err != nil {
-				// event channel update
-				fmt.Println(err)
-			} else {
-				// event channel update
-				tw.PrintTree("EVENT MANAGER")
-			}
+			fmt.Println(event)
+			tw.EventManager.Append(event)
+
+			/*
+				err := tw.EventManager(event.Op, event.Name)
+				if err != nil {
+					// event channel update
+					fmt.Println(err)
+				} else {
+					// event channel update
+					//tw.PrintTree("EVENT MANAGER")
+					fmt.Println(event.String())
+				}
+			*/
 		case err, ok := <-tw.Watcher.Errors:
 			if !ok {
 				return
@@ -154,10 +154,28 @@ func (tw *TreeWatcher) Watch() {
 
 func (tw *TreeWatcher) Start() {
 	fmt.Println("started!")
+	ticker := time.NewTicker(2 * time.Second)
+	go func() {
+		for {
+			select {
+			case _ = <-ticker.C:
+				if len(tw.EventManager.stack) > 0 {
+					_ = tw.EventManager.Process()
+					/*
+						for _, event := range newEvents {
+							fmt.Println(event.String())
+						}
+
+					*/
+
+				}
+			}
+		}
+	}()
 	go tw.Watch()
 }
 
-func NewFSPathWatcher(fsPath string) (*TreeWatcher, error) {
+func newLinuxPathWatcher(fsPath string) (*TreeWatcher, error) {
 	var err error
 	var watcher *fsnotify.Watcher
 	path := connector.NewFSPath(fsPath)
@@ -179,10 +197,11 @@ func NewFSPathWatcher(fsPath string) (*TreeWatcher, error) {
 	}
 
 	tw := TreeWatcher{
-		FileTree:   &root,
-		ParentPath: path.ParentPath(),
-		Path:       path,
-		Watcher:    watcher,
+		FileTree:     &root,
+		ParentPath:   path.ParentPath(),
+		Path:         path,
+		Watcher:      watcher,
+		EventManager: NewEventHandler(),
 	}
 	err = tw.Create(path)
 	if err != nil {

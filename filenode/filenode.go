@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ayhanozemre/fs-shadow/connector"
+	"github.com/ayhanozemre/fs-shadow/path"
 	"github.com/ayhanozemre/fs-shadow/utils"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -20,7 +20,7 @@ func (fn *FileNode) Remove(absolutePath connector.Path) error {
 		return errors.New("FileNode not found")
 	}
 	if len(node.Subs) == 0 {
-		return errors.New("Subs nodes not found")
+		return errors.New("subs nodes not found")
 	}
 	for nodeIndex, sub := range node.Subs {
 		if sub.Name == fileName {
@@ -149,7 +149,7 @@ func WalkOnFsPath(root *FileNode, absolutePath connector.Path, wg *sync.WaitGrou
 
 		sum, err := utils.Sum(newAbsolutePath)
 		if err != nil {
-			log.Error("sum error:", newAbsolutePath)
+			log.Error("sum error:", newAbsolutePath, err)
 		}
 
 		newNode := FileNode{
