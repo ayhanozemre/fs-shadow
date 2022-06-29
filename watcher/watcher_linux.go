@@ -129,8 +129,12 @@ func (tw *TreeWatcher) Watch() {
 			if !ok {
 				return
 			}
-			fmt.Println(event)
-			tw.EventManager.Append(event)
+			var sum string
+			node := tw.FileTree.Search(event.Name)
+			if node != nil {
+				sum = node.Meta.Sum
+			}
+			tw.EventManager.Append(event, sum)
 
 			/*
 				err := tw.EventManager(event.Op, event.Name)

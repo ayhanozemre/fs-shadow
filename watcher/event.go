@@ -36,7 +36,8 @@ func (e Event) String() string {
 }
 
 type EventManager struct {
-	stack []fsnotify.Event
+	stack    []fsnotify.Event
+	sumStack []string
 	sync.Mutex
 }
 
@@ -44,9 +45,10 @@ func NewEventHandler() *EventManager {
 	return &EventManager{stack: []fsnotify.Event{}}
 }
 
-func (e *EventManager) Append(event fsnotify.Event) {
+func (e *EventManager) Append(event fsnotify.Event, sum string) {
 	e.Lock()
 	e.stack = append(e.stack, event)
+	e.sumStack = append(e.sumStack, sum)
 	e.Unlock()
 }
 
@@ -58,7 +60,7 @@ func (e *EventManager) Pop() fsnotify.Event {
 	return event
 }
 
-func (e *EventManager) isCreate(e1, e2, e3 fsnotify.Event) (*Event, int) {
+func (e *EventManager) isCreate(e1, e2, e3 *fsnotify.Event) (*Event, int) {
 	_, e1FileErr := os.Stat(e1.Name)
 
 	/*
@@ -72,7 +74,7 @@ func (e *EventManager) isCreate(e1, e2, e3 fsnotify.Event) (*Event, int) {
 	*/
 
 	if e1.Op == fsnotify.Create {
-		if e2.Name == "" {
+		if e2 == nil {
 			fmt.Println("create1")
 			return &Event{FromPath: e1.Name, Type: Create}, 1
 		} else if e2.Op == fsnotify.Chmod && e1.Name == e2.Name {
@@ -89,8 +91,9 @@ func (e *EventManager) isCreate(e1, e2, e3 fsnotify.Event) (*Event, int) {
 	return nil, 0
 }
 
-func (e *EventManager) isRemove(e1, e2, e3 fsnotify.Event) (*Event, int) {
+func (e *EventManager) isRemove(e1, e2, e3 *fsnotify.Event) (*Event, int) {
 	_, e1FileErr := os.Stat(e1.Name)
+
 	/*
 		if e1.Op == fsnotify.Create && &e2 != nil && e2.Op == fsnotify.Rename &&
 			&e3 != nil && e3.Op == fsnotify.Rename && e1.Name == e2.Name && e1.Name == e3.Name &&
@@ -100,47 +103,65 @@ func (e *EventManager) isRemove(e1, e2, e3 fsnotify.Event) (*Event, int) {
 
 		}*/
 
-	if e1.Op == fsnotify.Remove && &e2 != nil && e2.Op == fsnotify.Remove && e1.Name == e2.Name {
+	if e1.Op == fsnotify.Remove && e2 != nil && e2.Op == fsnotify.Remove && e1.Name == e2.Name {
 		// watcher'a eklenmis bir klasoru sildigimizde bu case gerceklesecek.
 		fmt.Println("remove1")
 		return &Event{FromPath: e1.Name, Type: Remove}, 2
 	}
 
-	if e1.Op == fsnotify.Rename && &e2 != nil && e2.Op == fsnotify.Rename && e1.Name == e2.Name && os.IsNotExist(e1FileErr) {
+	if e1.Op == fsnotify.Rename && e2 != nil && e2.Op == fsnotify.Rename && e1.Name == e2.Name && os.IsNotExist(e1FileErr) {
 		// watcher'a eklenmis bir klasoru watch etmedigimiz bir klasore tasirsak bu case gerceklesecek
 		fmt.Println("remove2")
 		return &Event{FromPath: e1.Name, Type: Remove}, 2
 	}
+	/*
+		if e1.Op == fsnotify.Rename && e2 != nil &&
+			e2.Op == fsnotify.Create && os.IsNotExist(e1FileErr) {
+			_, e2FileErr := os.Stat(e2.Name)
 
-	_, e2FileErr := os.Stat(e2.Name)
+			if e2FileErr == nil {
+				if e3 != nil && e3.Op != fsnotify.Rename && e1.Name != e3.Name {
+					fmt.Println("extremeRemove")
+					return &Event{FromPath: e1.Name, Type: Remove}, 1
+				}
+				if e3 == nil {
+					fmt.Println("extremeRemove1")
+					return &Event{FromPath: e1.Name, Type: Remove}, 1
 
-	if e1.Op == fsnotify.Rename && &e2 != nil && e2.Op == fsnotify.Create && os.IsNotExist(e1FileErr) && e2FileErr == nil {
-		fmt.Println("extremeRemove")
-		return &Event{FromPath: e1.Name, Type: Remove}, 2
-	}
-	
-	if e1.Op == fsnotify.Rename && &e2 != nil && e2.Op != fsnotify.Create && &e3 != nil && e3.Op != fsnotify.Rename && os.IsNotExist(e1FileErr) {
-		// watcher'a eklenmemis bir klasoru watch etmedigimiz bir klasore tasirsak bu case gerceklesecek
-		fmt.Println("remove3")
+				}
+
+			}
+		}
+
+	*/
+	/*
+		if e1.Op == fsnotify.Rename && e2 != nil && e2.Op != fsnotify.Create && e3 != nil && e3.Op != fsnotify.Rename && os.IsNotExist(e1FileErr) {
+			// watcher'a eklenmemis bir klasoru watch etmedigimiz bir klasore tasirsak bu case gerceklesecek
+			fmt.Println("remove3")
+			return &Event{FromPath: e1.Name, Type: Remove}, 1
+		}
+
+	*/
+
+	if e1.Op == fsnotify.Rename && e2 == nil && os.IsNotExist(e1FileErr) {
+		fmt.Println("remove4")
 		return &Event{FromPath: e1.Name, Type: Remove}, 1
 	}
 
 	if e1.Op == fsnotify.Remove {
-		fmt.Println("remove4")
+		fmt.Println("remove5")
 		return &Event{FromPath: e1.Name, Type: Remove}, 1
 	}
 	return nil, 0
 }
 
-func (e *EventManager) isRename(e1, e2, e3 fsnotify.Event) (*Event, int) {
+func (e *EventManager) isRename(e1, e2, e3 *fsnotify.Event) (*Event, int) {
 	if e1.Op == fsnotify.Rename {
-		if e2.Name == "" {
-			return &Event{FromPath: e1.Name, Type: Rename}, 1
-		} else if &e2 != nil && e2.Op == fsnotify.Create && &e3 != nil && e3.Op == fsnotify.Rename && e1.Name == e3.Name {
+		if e2 != nil && e2.Op == fsnotify.Create && e3 != nil && e3.Op == fsnotify.Rename && e1.Name == e3.Name {
 			// watcher'a eklenmis bir klasoru rename yaptigimizda bu case gerceklesecek.
 			fmt.Println("rename1")
 			return &Event{FromPath: e1.Name, ToPath: e2.Name, Type: Rename}, 3
-		} else if e2.Op == fsnotify.Create && e1.Name != e2.Name {
+		} else if e2 != nil && e2.Op == fsnotify.Create && e1.Name != e2.Name {
 			// watcher'a eklenmemis bir klasoru rename yaptigimizda bu case gerceklesecek.
 			fmt.Println("rename2")
 			return &Event{FromPath: e1.Name, ToPath: e2.Name, Type: Rename}, 2
@@ -149,7 +170,7 @@ func (e *EventManager) isRename(e1, e2, e3 fsnotify.Event) (*Event, int) {
 	return nil, 0
 }
 
-func (e *EventManager) isWrite(e1 fsnotify.Event) (*Event, int) {
+func (e *EventManager) isWrite(e1 *fsnotify.Event) (*Event, int) {
 	if e1.Op == fsnotify.Write {
 		return &Event{FromPath: e1.Name, Type: Rename}, 1
 	}
@@ -163,16 +184,20 @@ func (e *EventManager) Process() []Event {
 	sl := len(e.stack)
 	var newEvents []Event
 	for {
-		var e1, e2, e3 fsnotify.Event
+		var e1, e2, e3 *fsnotify.Event
+		var e1Sum, e2Sum, e3Sum string
 		if cursor >= sl {
 			break
 		}
-		e1 = e.stack[cursor]
+		e1 = &e.stack[cursor]
+		e1Sum = e.sumStack[cursor]
 		if cursor+1 < sl {
-			e2 = e.stack[cursor+1]
+			e2 = &e.stack[cursor+1]
+			e2Sum = e.sumStack[cursor+1]
 		}
 		if cursor+2 < sl {
-			e3 = e.stack[cursor+2]
+			e3 = &e.stack[cursor+2]
+			e3Sum = e.sumStack[cursor+2]
 		}
 		if true {
 
@@ -203,6 +228,7 @@ func (e *EventManager) Process() []Event {
 			cursor += nc
 			newEvents = append(newEvents, *event)
 			fmt.Println(event.String())
+			// generate sum for nodeTree
 			continue
 		}
 		if event, nc := e.isRename(e1, e2, e3); event != nil {
@@ -216,8 +242,10 @@ func (e *EventManager) Process() []Event {
 	}
 	if cursor == sl {
 		e.stack = []fsnotify.Event{}
+		e.sumStack = []string{}
 	} else {
 		e.stack = e.stack[sl-(sl-cursor):]
+		e.sumStack = e.sumStack[sl-(sl-cursor):]
 	}
 	return newEvents
 }

@@ -5,20 +5,39 @@ import (
 	"encoding/hex"
 	"github.com/ayhanozemre/fs-shadow/path"
 	"io"
+	"io/ioutil"
 	"os"
 )
 
 func Sum(path connector.Path) (string, error) {
 	if path.IsDir() {
-		// folder sum is not necessary for now, but it should be here as an idea.
 		return FolderSum(path.String())
 	}
 	return FileSum(path.String())
 }
 
 func FolderSum(path string) (string, error) {
-	// sum of sums of sub folders can be hashed
-	return "", nil
+	deepLimit := 100
+	deepCount := 0
+	var s string
+
+	files, _ := ioutil.ReadDir(path)
+	for _, p := range files {
+		if deepLimit == deepCount {
+			break
+		}
+		s += p.Name()
+		deepCount += 1
+	}
+	if s == "" {
+		// If the folder is empty, use created at.
+		p, _ := os.Stat(path)
+		s = string(p.ModTime().Unix())
+	}
+	hasher := sha256.New()
+	hasher.Write([]byte(s))
+	value := hex.EncodeToString(hasher.Sum(nil))
+	return value, nil
 }
 
 func FileSum(path string) (string, error) {
