@@ -91,7 +91,7 @@ func (e *EventManager) isCreate(e1, e2, e3 *fsnotify.Event) (*Event, int) {
 	return nil, 0
 }
 
-func (e *EventManager) isRemove(e1, e2, e3 *fsnotify.Event) (*Event, int) {
+func (e *EventManager) isRemove(e1, e2, e3 *fsnotify.Event, e1Sum, e2Sum, e3Sum string) (*Event, int) {
 	_, e1FileErr := os.Stat(e1.Name)
 
 	/*
@@ -142,6 +142,11 @@ func (e *EventManager) isRemove(e1, e2, e3 *fsnotify.Event) (*Event, int) {
 		}
 
 	*/
+	fmt.Println("selam")
+	if e1.Op == fsnotify.Rename && e2 != nil && e2.Op == fsnotify.Create && e1Sum != e2Sum {
+		fmt.Println("extremeRemove")
+		return &Event{FromPath: e1.Name, Type: Remove}, 1
+	}
 
 	if e1.Op == fsnotify.Rename && e2 == nil && os.IsNotExist(e1FileErr) {
 		fmt.Println("remove4")
@@ -217,8 +222,7 @@ func (e *EventManager) Process() []Event {
 			newEvents = append(newEvents, *event)
 			continue
 		}
-
-		if event, nc := e.isRemove(e1, e2, e3); event != nil {
+		if event, nc := e.isRemove(e1, e2, e3, e1Sum, e2Sum, e3Sum); event != nil {
 			cursor += nc
 			newEvents = append(newEvents, *event)
 			fmt.Println(event.String())
@@ -227,9 +231,9 @@ func (e *EventManager) Process() []Event {
 		if event, nc := e.isCreate(e1, e2, e3); event != nil {
 			cursor += nc
 			newEvents = append(newEvents, *event)
-			fmt.Println(event.String())
+			fmt.Println("!", event.String())
 			// generate sum for nodeTree
-			continue
+			break
 		}
 		if event, nc := e.isRename(e1, e2, e3); event != nil {
 			cursor += nc

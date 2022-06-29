@@ -11,7 +11,7 @@ type Watcher interface {
 	Start()
 	Watch()
 	Close()
-	EventHandler(op EventType, path string) error
+	EventHandler(event Event) error
 	Create(path connector.Path) error
 	Write(path connector.Path) error
 	Rename(path connector.Path) error

@@ -16,7 +16,7 @@ type MetaData struct {
 type FileNode struct {
 	Subs []*FileNode `json:"subs"`
 	Name string      `json:"name"`
-	Meta MetaData    `json:"meta"`
+	Meta MetaData    `json:"-"`
 }
 
 type FileTree struct {

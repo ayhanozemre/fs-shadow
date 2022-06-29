@@ -31,12 +31,14 @@ func Test_SingleEvents(t *testing.T) {
 	// create process
 
 	//mkdir /tmp/fs-shadow/test
+	handler.stack = []fsnotify.Event{}
 	_ = os.Mkdir(folder, os.ModePerm)
 	handler.Append(fsnotify.Event{Name: folder, Op: fsnotify.Create}, "")
 	checkSingleEventResult(t, "[1] create folder", Event{FromPath: folder, Type: Create}, handler.Process())
 	_ = os.Remove(folder)
 
 	//touch /tmp/fs-shadow/test.txt
+	handler.stack = []fsnotify.Event{}
 	emptyFile, _ := os.Create(file)
 	_ = emptyFile.Close()
 	handler.Append(fsnotify.Event{Name: file, Op: fsnotify.Create}, "")
@@ -45,17 +47,20 @@ func Test_SingleEvents(t *testing.T) {
 	_ = os.Remove(file)
 
 	// watcher inactive; mv /tmp/fs-shadow/test .
+	handler.stack = []fsnotify.Event{}
 	_ = os.Mkdir(folder, os.ModePerm)
 	handler.Append(fsnotify.Event{Name: folder, Op: fsnotify.Create}, "")
 	handler.Append(fsnotify.Event{Name: folder, Op: fsnotify.Write}, "")
-	checkSingleEventResult(t, "[3] outside to inside", Event{FromPath: folder, Type: Create}, handler.Process())
+	checkSingleEventResult(t, "[3] create outside to inside", Event{FromPath: folder, Type: Create}, handler.Process())
 	_ = os.Remove(folder)
+	fmt.Println("size", len(handler.stack))
 
 	// watcher active; mv /tmp/fs-shadow/test .
+	handler.stack = []fsnotify.Event{}
 	_ = os.Mkdir(folder, os.ModePerm)
 	handler.Append(fsnotify.Event{Name: folder, Op: fsnotify.Create}, "")
 	handler.Append(fsnotify.Event{Name: folder, Op: fsnotify.Rename}, "")
-	checkSingleEventResult(t, "[4] w outside to inside", Event{FromPath: folder, Type: Create}, handler.Process())
+	checkSingleEventResult(t, "[4] w create outside to inside", Event{FromPath: folder, Type: Create}, handler.Process())
 	_ = os.Remove(folder)
 
 	//-------------------------------------------------------------------------------------
@@ -132,17 +137,21 @@ func Test_EventQueue(t *testing.T) {
 	_ = os.Mkdir(folder, os.ModePerm)
 	handler.Append(fsnotify.Event{Name: "/tmp/a", Op: fsnotify.Create}, "3")
 
-	result := handler.Process()
+	results := []Event{}
+	for i := 0; i != 3; i++ {
+		r := handler.Process()
+		results = append(results, r...)
+	}
 	expectResult := []Event{
 		{FromPath: folder, Type: Create},
 		{FromPath: folder, Type: Remove},
 		{FromPath: folder, Type: Create},
 	}
-	if len(result) != len(expectResult) {
-		t.Fatalf("Results(%d) and ExpectResult(%d) not equal", len(result), len(expectResult))
+	if len(results) != len(expectResult) {
+		t.Fatalf("Results(%d) and ExpectResult(%d) not equal", len(results), len(expectResult))
 	}
 	for i, expectValue := range expectResult {
-		resultValue := result[i]
+		resultValue := results[i]
 		if expectValue != resultValue {
 			message := fmt.Sprintf("exceptType:%s resultType:%s", expectValue.Type, resultValue.Type)
 			t.Fatalf(message)
