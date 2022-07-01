@@ -19,6 +19,8 @@ type TreeWatcher struct {
 	ParentPath connector.Path
 
 	Events chan Event // bu channel'i servislere verecegiz. not implemented
+	Errors chan error
+
 	sync.Mutex
 	EventManager *EventManager
 }
@@ -41,8 +43,8 @@ func (tw *TreeWatcher) Close() {
 
 func (tw *TreeWatcher) Remove(path connector.Path) error {
 	eventPath := path.ExcludePath(tw.ParentPath)
-	err := tw.FileTree.Remove(eventPath)
-	if err == nil && path.IsDir() {
+	err, node := tw.FileTree.Remove(eventPath)
+	if err == nil && node != nil && node.Meta.IsDir {
 		err = tw.Watcher.Remove(path.String())
 		if err != nil {
 			return err
@@ -93,33 +95,42 @@ func (tw *TreeWatcher) Create(path connector.Path) error {
 	return err
 }
 
-func (tw *TreeWatcher) Rename(path connector.Path) error {
-	if !path.Exists() {
-		return tw.Remove(path)
+func (tw *TreeWatcher) Rename(fromPath connector.Path, toPath connector.Path) error {
+	var err error
+	err = tw.FileTree.Rename(fromPath.ExcludePath(tw.ParentPath), toPath.ExcludePath(tw.ParentPath))
+	if err != nil {
+		return err
 	}
-	return nil
+
+	err = tw.Watcher.Remove(fromPath.String())
+	if err != nil {
+		return err
+	}
+
+	err = tw.Watcher.Add(toPath.String())
+	return err
 }
 
 func (tw *TreeWatcher) EventHandler(event Event) (err error) {
 	tw.Lock()
 	defer tw.Unlock()
-
-	pathIns := connector.NewFSPath(event.FromPath)
+	fromPath := connector.NewFSPath(event.FromPath)
 
 	switch event.Type {
 	case Remove:
-		err = tw.Remove(pathIns)
+		err = tw.Remove(fromPath)
 	case Write:
-		err = tw.Write(pathIns)
+		err = tw.Write(fromPath)
 	case Create:
-		err = tw.Create(pathIns)
+		err = tw.Create(fromPath)
 	case Rename:
-		err = tw.Rename(pathIns)
+		toPath := connector.NewFSPath(event.ToPath)
+		err = tw.Rename(fromPath, toPath)
 	default:
-		errorMsg := fmt.Sprintf("un handled event: op:%s, path:%s", event.Type, event.FromPath)
+		errorMsg := fmt.Sprintf("unhandled event: op:%s, path:%s", event.Type, event.FromPath)
 		return errors.New(errorMsg)
 	}
-	return nil
+	return err
 }
 
 func (tw *TreeWatcher) Watch() {
@@ -137,18 +148,6 @@ func (tw *TreeWatcher) Watch() {
 				sum = node.Meta.Sum
 			}
 			tw.EventManager.Append(event, sum)
-
-			/*
-				err := tw.EventManager(event.Op, event.Name)
-				if err != nil {
-					// event channel update
-					fmt.Println(err)
-				} else {
-					// event channel update
-					//tw.PrintTree("EVENT MANAGER")
-					fmt.Println(event.String())
-				}
-			*/
 		case err, ok := <-tw.Watcher.Errors:
 			if !ok {
 				return
@@ -174,7 +173,6 @@ func (tw *TreeWatcher) Start() {
 							fmt.Println(err)
 						}
 					}
-					tw.PrintTree("EVENT MANAGER")
 				}
 			}
 		}

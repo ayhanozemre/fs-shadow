@@ -13,22 +13,32 @@ import (
 	"sync"
 )
 
-func (fn *FileNode) Remove(absolutePath connector.Path) error {
-	fileName := absolutePath.Name()
-	node := fn.Search(absolutePath.ParentPath().String())
+func (fn *FileNode) Rename(fromPath connector.Path, toPath connector.Path) error {
+	node := fn.Search(fromPath.String())
 	if node == nil {
 		return errors.New("FileNode not found")
 	}
+	node.Name = toPath.Name()
+	return nil
+}
+
+func (fn *FileNode) Remove(absolutePath connector.Path) (err error, deletedNode *FileNode) {
+	fileName := absolutePath.Name()
+	node := fn.Search(absolutePath.ParentPath().String())
+	if node == nil {
+		return errors.New("FileNode not found"), nil
+	}
 	if len(node.Subs) == 0 {
-		return errors.New("subs nodes not found")
+		return errors.New("subs nodes not found"), nil
 	}
 	for nodeIndex, sub := range node.Subs {
 		if sub.Name == fileName {
+			deletedNode = node.Subs[nodeIndex]
 			node.Subs = append(node.Subs[:nodeIndex], node.Subs[nodeIndex+1:]...)
-			return nil
+			return nil, deletedNode
 		}
 	}
-	return nil
+	return err, nil
 }
 
 func (fn *FileNode) Update(treePath connector.Path, absolutePath connector.Path) error {

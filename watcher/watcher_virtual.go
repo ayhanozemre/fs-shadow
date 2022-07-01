@@ -54,7 +54,7 @@ func (tw *VirtualTree) Remove(path connector.Path) error {
 	tw.Lock()
 	defer tw.Unlock()
 	eventPath := path.ExcludePath(tw.ParentPath)
-	err := tw.FileTree.Remove(eventPath)
+	err, _ := tw.FileTree.Remove(eventPath)
 	return err
 }
 

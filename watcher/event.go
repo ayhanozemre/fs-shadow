@@ -60,18 +60,8 @@ func (e *EventManager) Pop() fsnotify.Event {
 	return event
 }
 
-func (e *EventManager) isCreate(e1, e2, e3 *fsnotify.Event) (*Event, int) {
+func (e *EventManager) isCreate(e1, e2, e3 *fsnotify.Event, e1Sum, e2Sum string) (*Event, int) {
 	_, e1FileErr := os.Stat(e1.Name)
-
-	/*
-			if e1.Op == fsnotify.Rename && &e2 != nil && e2.Op == fsnotify.Rename &&
-			&e3 != nil && e3.Op == fsnotify.Create && e1.Name == e2.Name && e1.Name == e3.Name &&
-			!os.IsNotExist(e1FileErr) {
-			fmt.Println("excase2")
-			return &Event{FromPath: e1.Name, Type: Create}, 3
-		}
-
-	*/
 
 	if e1.Op == fsnotify.Create {
 		if e2 == nil {
@@ -80,11 +70,11 @@ func (e *EventManager) isCreate(e1, e2, e3 *fsnotify.Event) (*Event, int) {
 		} else if e2.Op == fsnotify.Chmod && e1.Name == e2.Name {
 			fmt.Println("create2")
 			return &Event{FromPath: e1.Name, Type: Create}, 2
-		} else if e2.Op == fsnotify.Rename && e1.Name == e2.Name && e1FileErr == nil {
-			fmt.Println("create4")
+		} else if e2.Op == fsnotify.Rename && e1.Name == e2.Name && e1Sum == e2Sum && e1FileErr == nil {
+			fmt.Println("create3")
 			return &Event{FromPath: e1.Name, Type: Create}, 2
 		} else {
-			fmt.Println("create3")
+			fmt.Println("create4")
 			return &Event{FromPath: e1.Name, Type: Create}, 1
 		}
 	}
@@ -93,15 +83,6 @@ func (e *EventManager) isCreate(e1, e2, e3 *fsnotify.Event) (*Event, int) {
 
 func (e *EventManager) isRemove(e1, e2, e3 *fsnotify.Event, e1Sum, e2Sum, e3Sum string) (*Event, int) {
 	_, e1FileErr := os.Stat(e1.Name)
-
-	/*
-		if e1.Op == fsnotify.Create && &e2 != nil && e2.Op == fsnotify.Rename &&
-			&e3 != nil && e3.Op == fsnotify.Rename && e1.Name == e2.Name && e1.Name == e3.Name &&
-			os.IsNotExist(e1FileErr) {
-			fmt.Println("excase1")
-			return &Event{FromPath: e1.Name, Type: Remove}, 3
-
-		}*/
 
 	if e1.Op == fsnotify.Remove && e2 != nil && e2.Op == fsnotify.Remove && e1.Name == e2.Name {
 		// watcher'a eklenmis bir klasoru sildigimizde bu case gerceklesecek.
@@ -114,35 +95,7 @@ func (e *EventManager) isRemove(e1, e2, e3 *fsnotify.Event, e1Sum, e2Sum, e3Sum 
 		fmt.Println("remove2")
 		return &Event{FromPath: e1.Name, Type: Remove}, 2
 	}
-	/*
-		if e1.Op == fsnotify.Rename && e2 != nil &&
-			e2.Op == fsnotify.Create && os.IsNotExist(e1FileErr) {
-			_, e2FileErr := os.Stat(e2.Name)
-
-			if e2FileErr == nil {
-				if e3 != nil && e3.Op != fsnotify.Rename && e1.Name != e3.Name {
-					fmt.Println("extremeRemove")
-					return &Event{FromPath: e1.Name, Type: Remove}, 1
-				}
-				if e3 == nil {
-					fmt.Println("extremeRemove1")
-					return &Event{FromPath: e1.Name, Type: Remove}, 1
-
-				}
-
-			}
-		}
-
-	*/
-	/*
-		if e1.Op == fsnotify.Rename && e2 != nil && e2.Op != fsnotify.Create && e3 != nil && e3.Op != fsnotify.Rename && os.IsNotExist(e1FileErr) {
-			// watcher'a eklenmemis bir klasoru watch etmedigimiz bir klasore tasirsak bu case gerceklesecek
-			fmt.Println("remove3")
-			return &Event{FromPath: e1.Name, Type: Remove}, 1
-		}
-
-	*/
-	fmt.Println("selam")
+	//fmt.Println("e1/e2 sum", e1Sum, e2Sum)
 	if e1.Op == fsnotify.Rename && e2 != nil && e2.Op == fsnotify.Create && e1Sum != e2Sum {
 		fmt.Println("extremeRemove")
 		return &Event{FromPath: e1.Name, Type: Remove}, 1
@@ -204,13 +157,6 @@ func (e *EventManager) Process() []Event {
 			e3 = &e.stack[cursor+2]
 			e3Sum = e.sumStack[cursor+2]
 		}
-		if true {
-
-			fmt.Println("------------------------")
-			fmt.Println("E1-", e1, cursor, sl)
-			fmt.Println("E2-", e2)
-			fmt.Println("E3-", e3)
-		}
 
 		if e1.Op == fsnotify.Chmod {
 			cursor += 1
@@ -228,11 +174,11 @@ func (e *EventManager) Process() []Event {
 			fmt.Println(event.String())
 			continue
 		}
-		if event, nc := e.isCreate(e1, e2, e3); event != nil {
+		if event, nc := e.isCreate(e1, e2, e3, e1Sum, e2Sum); event != nil {
 			cursor += nc
 			newEvents = append(newEvents, *event)
-			fmt.Println("!", event.String())
-			// generate sum for nodeTree
+			fmt.Println(event.String())
+			// break and generate sum for nodeTree
 			break
 		}
 		if event, nc := e.isRename(e1, e2, e3); event != nil {
@@ -241,7 +187,6 @@ func (e *EventManager) Process() []Event {
 			fmt.Println(event.String())
 			continue
 		}
-		fmt.Println("break")
 		break
 	}
 	if cursor == sl {

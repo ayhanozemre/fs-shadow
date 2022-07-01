@@ -12,10 +12,10 @@ type Watcher interface {
 	Watch()
 	Close()
 	EventHandler(event Event) error
-	Create(path connector.Path) error
-	Write(path connector.Path) error
-	Rename(path connector.Path) error
-	Remove(path connector.Path) error
+	Create(fromPath connector.Path) error
+	Write(fromPath connector.Path) error
+	Rename(fromPath connector.Path, toPath connector.Path) error
+	Remove(fromPath connector.Path) error
 }
 
 func NewFSWatcher(fsPath string) (Watcher, error) {

@@ -19,8 +19,8 @@ func (path FSPath) IsVirtual() bool {
 }
 
 func (path FSPath) IsDir() bool {
-	fInfo, ok := os.Stat(path.String())
-	if ok != nil {
+	fInfo, err := os.Stat(path.String())
+	if err != nil {
 		return false
 	}
 	return fInfo.IsDir()
