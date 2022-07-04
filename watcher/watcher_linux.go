@@ -23,7 +23,7 @@ type TreeWatcher struct {
 	Errors chan error
 
 	sync.Mutex
-	EventManager *event.EventManager
+	EventManager event.EventHandler
 }
 
 func (tw *TreeWatcher) PrintTree(label string) {
@@ -112,7 +112,7 @@ func (tw *TreeWatcher) Rename(fromPath connector.Path, toPath connector.Path) er
 	return err
 }
 
-func (tw *TreeWatcher) EventHandler(e event.Event) (err error) {
+func (tw *TreeWatcher) Handler(e event.Event) (err error) {
 	tw.Lock()
 	defer tw.Unlock()
 	fromPath := connector.NewFSPath(e.FromPath)
@@ -137,18 +137,18 @@ func (tw *TreeWatcher) EventHandler(e event.Event) (err error) {
 func (tw *TreeWatcher) Watch() {
 	for {
 		select {
-		case event, ok := <-tw.Watcher.Events:
+		case e, ok := <-tw.Watcher.Events:
 			if !ok {
 				return
 			}
 			var sum string
-			path := connector.NewFSPath(event.Name)
+			path := connector.NewFSPath(e.Name)
 			eventPath := path.ExcludePath(tw.ParentPath)
 			node := tw.FileTree.Search(eventPath.ParentPath().String())
 			if node != nil {
 				sum = node.Meta.Sum
 			}
-			tw.EventManager.Append(event, sum)
+			tw.EventManager.Append(e, sum)
 		case err, ok := <-tw.Watcher.Errors:
 			if !ok {
 				return
@@ -165,10 +165,10 @@ func (tw *TreeWatcher) Start() {
 		for {
 			select {
 			case _ = <-ticker.C:
-				if tw.EventManager.StackLenght() > 0 {
+				if tw.EventManager.StackLength() > 0 {
 					newEvents := tw.EventManager.Process()
-					for _, event := range newEvents {
-						err := tw.EventHandler(event)
+					for _, e := range newEvents {
+						err := tw.Handler(e)
 						if err != nil {
 							// event channel update
 							fmt.Println(err)

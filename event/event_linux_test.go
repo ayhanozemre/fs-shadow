@@ -19,7 +19,7 @@ func checkSingleEventResult(t *testing.T, name string, expect Event, result []Ev
 }
 
 func Test_SingleEvents(t *testing.T) {
-	handler := NewEventHandler()
+	handler := newLinuxEventHandler()
 	testFolder := "/tmp/fs-shadow"
 	file := "/tmp/fs-shadow/test.txt"
 	file1 := "/tmp/fs-shadow/test1.txt"
@@ -116,7 +116,7 @@ func Test_SingleEvents(t *testing.T) {
 }
 
 func Test_EventQueue(t *testing.T) {
-	handler := NewEventHandler()
+	handler := newLinuxEventHandler()
 	testFolder := "/tmp/fs-shadow"
 	folder := filepath.Join(testFolder, "test")
 	folder1 := filepath.Join(testFolder, "test1")
@@ -138,7 +138,7 @@ func Test_EventQueue(t *testing.T) {
 	_ = os.Mkdir(folder, os.ModePerm)
 	handler.Append(fsnotify.Event{Name: folder, Op: fsnotify.Create}, "3")
 
-	results := []Event{}
+	var results []Event
 	for {
 		r := handler.Process()
 		if len(r) == 0 {

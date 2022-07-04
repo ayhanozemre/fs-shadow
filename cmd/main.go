@@ -2,10 +2,11 @@ package main
 
 import (
 	"github.com/ayhanozemre/fs-shadow/watcher"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
+	log.SetLevel(log.DebugLevel)
 	//tw, err := watcher.NewVirtualPathWatcher("/home/wade/Desktop/TransferChain")
 	tw, err := watcher.NewFSWatcher("/home/wade/Desktop/TransferChain")
 
@@ -14,7 +15,7 @@ func main() {
 		done := make(chan bool)
 		<-done
 	} else {
-		logrus.Panic(err)
+		log.Panic(err)
 	}
 	tw.Close()
 

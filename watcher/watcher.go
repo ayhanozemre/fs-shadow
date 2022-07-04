@@ -1,9 +1,9 @@
 package watcher
 
 import (
-	"fmt"
 	"github.com/ayhanozemre/fs-shadow/event"
 	connector "github.com/ayhanozemre/fs-shadow/path"
+	log "github.com/sirupsen/logrus"
 	"runtime"
 )
 
@@ -12,7 +12,7 @@ type Watcher interface {
 	Start()
 	Watch()
 	Close()
-	EventHandler(event event.Event) error
+	Handler(event event.Event) error
 	Create(fromPath connector.Path) error
 	Write(fromPath connector.Path) error
 	Rename(fromPath connector.Path, toPath connector.Path) error
@@ -24,9 +24,9 @@ func NewFSWatcher(fsPath string) (Watcher, error) {
 	var err error
 	switch os := runtime.GOOS; os {
 	case "darwin":
-		fmt.Println("OS X watcher")
+		log.Debug("OS X watcher not implemented")
 	case "windows":
-		fmt.Println("windows watcher")
+		log.Debug("windows watcher not implemented")
 	default:
 		watcher, err = newLinuxPathWatcher(fsPath)
 	}
