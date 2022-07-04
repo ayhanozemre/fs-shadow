@@ -50,7 +50,7 @@ func (path *FSPath) Name() string {
 }
 
 func (path *FSPath) String() string {
-	return string(path.p)
+	return path.p
 }
 
 func (path *FSPath) ParentPath() Path {
