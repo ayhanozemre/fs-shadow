@@ -1,9 +1,10 @@
-package watcher
+package event
 
 import (
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -117,8 +118,8 @@ func Test_SingleEvents(t *testing.T) {
 func Test_EventQueue(t *testing.T) {
 	handler := NewEventHandler()
 	testFolder := "/tmp/fs-shadow"
-	folder := "/tmp/fs-shadow/test"
-	folder1 := "/tmp/fs-shadow/test1"
+	folder := filepath.Join(testFolder, "test")
+	folder1 := filepath.Join(testFolder, "test1")
 
 	// create test process folder
 	_ = os.Mkdir(testFolder, os.ModePerm)

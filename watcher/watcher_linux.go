@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ayhanozemre/fs-shadow/event"
 	"github.com/ayhanozemre/fs-shadow/filenode"
 	"github.com/ayhanozemre/fs-shadow/path"
 	"github.com/fsnotify/fsnotify"
@@ -18,11 +19,11 @@ type TreeWatcher struct {
 	Path       connector.Path
 	ParentPath connector.Path
 
-	Events chan Event // bu channel'i servislere verecegiz. not implemented
+	Events chan event.Event // bu channel'i servislere verecegiz. not implemented
 	Errors chan error
 
 	sync.Mutex
-	EventManager *EventManager
+	EventManager *event.EventManager
 }
 
 func (tw *TreeWatcher) PrintTree(label string) {
@@ -111,23 +112,23 @@ func (tw *TreeWatcher) Rename(fromPath connector.Path, toPath connector.Path) er
 	return err
 }
 
-func (tw *TreeWatcher) EventHandler(event Event) (err error) {
+func (tw *TreeWatcher) EventHandler(e event.Event) (err error) {
 	tw.Lock()
 	defer tw.Unlock()
-	fromPath := connector.NewFSPath(event.FromPath)
+	fromPath := connector.NewFSPath(e.FromPath)
 
-	switch event.Type {
-	case Remove:
+	switch e.Type {
+	case event.Remove:
 		err = tw.Remove(fromPath)
-	case Write:
+	case event.Write:
 		err = tw.Write(fromPath)
-	case Create:
+	case event.Create:
 		err = tw.Create(fromPath)
-	case Rename:
-		toPath := connector.NewFSPath(event.ToPath)
+	case event.Rename:
+		toPath := connector.NewFSPath(e.ToPath)
 		err = tw.Rename(fromPath, toPath)
 	default:
-		errorMsg := fmt.Sprintf("unhandled event: op:%s, path:%s", event.Type, event.FromPath)
+		errorMsg := fmt.Sprintf("unhandled event: op:%s, path:%s", e.Type, e.FromPath)
 		return errors.New(errorMsg)
 	}
 	return err
@@ -164,7 +165,7 @@ func (tw *TreeWatcher) Start() {
 		for {
 			select {
 			case _ = <-ticker.C:
-				if len(tw.EventManager.stack) > 0 {
+				if tw.EventManager.StackLenght() > 0 {
 					newEvents := tw.EventManager.Process()
 					for _, event := range newEvents {
 						err := tw.EventHandler(event)
@@ -206,7 +207,7 @@ func newLinuxPathWatcher(fsPath string) (*TreeWatcher, error) {
 		ParentPath:   path.ParentPath(),
 		Path:         path,
 		Watcher:      watcher,
-		EventManager: NewEventHandler(),
+		EventManager: event.NewEventHandler(),
 	}
 	err = tw.Create(path)
 	if err != nil {

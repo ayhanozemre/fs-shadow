@@ -2,6 +2,7 @@ package watcher
 
 import (
 	"fmt"
+	"github.com/ayhanozemre/fs-shadow/event"
 	connector "github.com/ayhanozemre/fs-shadow/path"
 	"runtime"
 )
@@ -11,7 +12,7 @@ type Watcher interface {
 	Start()
 	Watch()
 	Close()
-	EventHandler(event Event) error
+	EventHandler(event event.Event) error
 	Create(fromPath connector.Path) error
 	Write(fromPath connector.Path) error
 	Rename(fromPath connector.Path, toPath connector.Path) error

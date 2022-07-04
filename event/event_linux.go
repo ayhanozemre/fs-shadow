@@ -1,4 +1,4 @@
-package watcher
+package event
 
 import (
 	"fmt"
@@ -6,34 +6,6 @@ import (
 	"os"
 	"sync"
 )
-
-type EventType string
-
-func (e EventType) String() string {
-	return string(e)
-}
-
-const (
-	Remove EventType = "remove"
-	Write  EventType = "write"
-	Create EventType = "create"
-	Rename EventType = "rename"
-)
-
-type Event struct {
-	Type     EventType
-	FromPath string
-	ToPath   string
-}
-
-func (e Event) String() string {
-	s := fmt.Sprintf("rsult %s", e.FromPath)
-	if e.Type == Rename {
-		s += fmt.Sprintf(" -> %s", e.ToPath)
-	}
-	s += fmt.Sprintf(" [%s]", e.Type)
-	return s
-}
 
 type EventManager struct {
 	stack    []fsnotify.Event
@@ -50,6 +22,10 @@ func (e *EventManager) Append(event fsnotify.Event, sum string) {
 	e.stack = append(e.stack, event)
 	e.sumStack = append(e.sumStack, sum)
 	e.Unlock()
+}
+
+func (e *EventManager) StackLenght() int {
+	return len(e.stack)
 }
 
 func (e *EventManager) Pop() fsnotify.Event {

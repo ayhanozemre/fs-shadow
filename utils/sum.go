@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"github.com/ayhanozemre/fs-shadow/path"
 	"io"
 	"io/ioutil"
@@ -19,23 +21,23 @@ func Sum(path connector.Path) (string, error) {
 func FolderSum(path string) (string, error) {
 	deepLimit := 100
 	deepCount := 0
-	var s string
+	var buff bytes.Buffer
 
 	files, _ := ioutil.ReadDir(path)
 	for _, p := range files {
 		if deepLimit == deepCount {
 			break
 		}
-		s += p.Name()
+		buff.WriteString(p.Name())
 		deepCount += 1
 	}
-	if s == "" {
+	if buff.String() == "" {
 		// If the folder is empty, use created at.
 		p, _ := os.Stat(path)
-		s = string(p.ModTime().Unix())
+		buff.WriteString(fmt.Sprint(p.ModTime().Unix()))
 	}
 	hasher := sha256.New()
-	hasher.Write([]byte(s))
+	hasher.Write(buff.Bytes())
 	value := hex.EncodeToString(hasher.Sum(nil))
 	return value, nil
 }
