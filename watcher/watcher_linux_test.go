@@ -115,13 +115,41 @@ func Test_Functionality(t *testing.T) {
 	assert.Equal(t, nil, err, "file node remove error")
 	assert.Equal(t, 1, len(root.Subs), "file node not removed")
 
+	var e event.Event
 	// Handler Create
-	newFileName := connector.NewFSPath(filepath.Join(testRoot, "new-file.txt"))
-	_, _ = os.Create(newFileName.String())
-	e := event.Event{FromPath: newFileName.String(), Type: event.Create}
+	handlerTestFile := connector.NewFSPath(filepath.Join(testRoot, "new-file.txt"))
+	_, _ = os.Create(handlerTestFile.String())
+	e = event.Event{FromPath: handlerTestFile.String(), Type: event.Create}
 	err = tw.Handler(e)
-	assert.Equal(t, nil, err, "handler error")
-	assert.Equal(t, newFileName.Name(), tw.FileTree.Subs[1].Name, "handler: filename mismatch error")
+	assert.Equal(t, nil, err, "handler creation error")
+	assert.Equal(t, handlerTestFile.Name(), tw.FileTree.Subs[1].Name, "handler: filename mismatch error")
+
+	// Handler Write
+	oldSum = tw.FileTree.Subs[1].Meta.Sum
+	f, _ = os.OpenFile(handlerTestFile.String(), os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	_, err = f.WriteString("handler-write")
+	_ = f.Close()
+
+	e = event.Event{FromPath: handlerTestFile.String(), Type: event.Write}
+	err = tw.Handler(e)
+	assert.Equal(t, nil, err, "handler write error")
+	assert.NotEqual(t, oldSum, tw.FileTree.Subs[1].Meta.Sum, "handler: file sum mismatch")
+
+	// Handler Rename
+	handlerRenameTestFile := connector.NewFSPath(filepath.Join(testRoot, "new-file-rename.txt"))
+	_ = os.Rename(handlerTestFile.String(), handlerRenameTestFile.String())
+	e = event.Event{FromPath: handlerTestFile.String(), ToPath: handlerRenameTestFile.String(), Type: event.Rename}
+	err = tw.Handler(e)
+	assert.Equal(t, nil, err, "handler rename error")
+	assert.Equal(t, handlerRenameTestFile.Name(), tw.FileTree.Subs[1].Name, "handler: filename mismatch error")
+
+	// Handler Remove
+	handlerRenameTestFile = connector.NewFSPath(filepath.Join(testRoot, "new-file-rename.txt"))
+	_ = os.Remove(handlerRenameTestFile.String())
+	e = event.Event{FromPath: handlerRenameTestFile.String(), Type: event.Remove}
+	err = tw.Handler(e)
+	assert.Equal(t, nil, err, "handler remove error")
+	assert.Equal(t, len(tw.FileTree.Subs), 1, "handler: root subs length error")
 
 	_ = os.RemoveAll(testRoot)
 
