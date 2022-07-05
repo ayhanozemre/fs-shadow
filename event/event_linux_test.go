@@ -21,10 +21,11 @@ func checkSingleEventResult(t *testing.T, name string, expect Event, result []Ev
 func Test_SingleEvents(t *testing.T) {
 	handler := newLinuxEventHandler()
 	testFolder := "/tmp/fs-shadow"
-	file := "/tmp/fs-shadow/test.txt"
-	file1 := "/tmp/fs-shadow/test1.txt"
-	folder := "/tmp/fs-shadow/test"
-	folder1 := "/tmp/fs-shadow/test1"
+
+	file := filepath.Join(testFolder, "test.txt")
+	file1 := filepath.Join(testFolder, "test1.txt")
+	folder := filepath.Join(testFolder, "test")
+	folder1 := filepath.Join(testFolder, "test1")
 
 	// create test process folder
 	_ = os.Mkdir(testFolder, os.ModePerm)
@@ -162,6 +163,6 @@ func Test_EventQueue(t *testing.T) {
 		}
 	}
 
-	_ = os.Remove(testFolder)
+	_ = os.RemoveAll(testFolder)
 
 }

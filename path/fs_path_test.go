@@ -9,6 +9,7 @@ import (
 
 func Test_FSPath(t *testing.T) {
 	testFolder := "/tmp/fs-shadow"
+	_ = os.Mkdir(testFolder, os.ModePerm)
 
 	emptyFolder := filepath.Join(testFolder, "test")
 	_ = os.Mkdir(emptyFolder, os.ModePerm)
@@ -37,5 +38,5 @@ func Test_FSPath(t *testing.T) {
 	tmp = NewFSPath("/tmp")
 	assert.Equal(t, folderPath.ExcludePath(tmp).String(), "fs-shadow/test", "invalid file name.")
 
-	_ = os.Remove(testFolder)
+	_ = os.RemoveAll(testFolder)
 }
