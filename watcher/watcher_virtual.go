@@ -66,11 +66,13 @@ func (tw *VirtualTree) Write(path connector.Path) error {
 func (tw *VirtualTree) Close() {
 }
 
-func (tw *VirtualTree) Rename(path connector.Path) error {
+func (tw *VirtualTree) Rename(fromPath connector.Path, toPath connector.Path) error {
 	tw.Lock()
 	defer tw.Unlock()
-	if !path.Exists() {
-		return tw.Remove(path)
+	var err error
+	err = tw.FileTree.Rename(fromPath.ExcludePath(tw.ParentPath), toPath.ExcludePath(tw.ParentPath))
+	if err != nil {
+		return err
 	}
 	return nil
 }

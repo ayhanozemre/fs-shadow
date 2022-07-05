@@ -12,11 +12,11 @@ import (
 	"time"
 )
 
-func Test_UseCase(t *testing.T) {
+func Test_LinuxWatcherUseCase(t *testing.T) {
 	testRoot := "/tmp/fs-shadow"
 	_ = os.Mkdir(testRoot, os.ModePerm)
 
-	tw, err := newLinuxPathWatcher(testRoot)
+	tw, err := NewLinuxPathWatcher(testRoot)
 	assert.Equal(t, nil, err, "linux patch watcher creation error")
 
 	// create folder
@@ -45,7 +45,7 @@ func Test_UseCase(t *testing.T) {
 
 }
 
-func Test_Functionality(t *testing.T) {
+func Test_LinuxWatcherFunctionality(t *testing.T) {
 	var err error
 	var watcher *fsnotify.Watcher
 	parentPath := "/tmp"

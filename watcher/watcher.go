@@ -28,7 +28,7 @@ func NewFSWatcher(fsPath string) (Watcher, error) {
 	case "windows":
 		log.Debug("windows watcher not implemented")
 	default:
-		watcher, err = newLinuxPathWatcher(fsPath)
+		watcher, err = NewLinuxPathWatcher(fsPath)
 	}
 	return watcher, err
 }

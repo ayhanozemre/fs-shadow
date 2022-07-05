@@ -182,7 +182,7 @@ func (tw *TreeWatcher) Start() {
 	go tw.Watch()
 }
 
-func newLinuxPathWatcher(fsPath string) (*TreeWatcher, error) {
+func NewLinuxPathWatcher(fsPath string) (*TreeWatcher, error) {
 	var err error
 	var watcher *fsnotify.Watcher
 	path := connector.NewFSPath(fsPath)
