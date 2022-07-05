@@ -102,13 +102,14 @@ func (tw *TreeWatcher) Rename(fromPath connector.Path, toPath connector.Path) er
 	if err != nil {
 		return err
 	}
+	if fromPath.IsDir() {
+		err = tw.Watcher.Remove(fromPath.String())
+		if err != nil {
+			return err
+		}
 
-	err = tw.Watcher.Remove(fromPath.String())
-	if err != nil {
-		return err
+		err = tw.Watcher.Add(toPath.String())
 	}
-
-	err = tw.Watcher.Add(toPath.String())
 	return err
 }
 
