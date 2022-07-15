@@ -8,6 +8,14 @@ import (
 	"testing"
 )
 
+func Test_VirtualWatcherUseCase(t *testing.T) {
+	root := "fs-shadow"
+	watcher, err := NewVirtualPathWatcher(root)
+	assert.Equal(t, nil, err, "watcher creation error")
+
+	watcher.Close()
+}
+
 func Test_VirtualWatcherFunctionality(t *testing.T) {
 	var err error
 	parentPath := "/tmp"

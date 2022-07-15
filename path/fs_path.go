@@ -3,6 +3,7 @@ package connector
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 )
 
@@ -13,6 +14,17 @@ type FSPath struct {
 func NewFSPath(p string) *FSPath {
 	return &FSPath{p: p}
 }
+
+func separator() string {
+	switch o := runtime.GOOS; o {
+	case "windows":
+		return "\\"
+	default:
+		return "/"
+	}
+}
+
+var Separator = separator()
 
 func (path FSPath) IsVirtual() bool {
 	return false
@@ -44,7 +56,7 @@ func (path *FSPath) Exists() bool {
 }
 
 func (path *FSPath) Name() string {
-	parts := strings.Split(path.String(), "/")
+	parts := strings.Split(path.String(), Separator)
 	lastName := parts[len(parts)-1]
 	return lastName
 }
@@ -54,13 +66,13 @@ func (path *FSPath) String() string {
 }
 
 func (path *FSPath) ParentPath() Path {
-	parts := strings.Split(path.String(), "/")
-	absolutePath := strings.Join(parts[:len(parts)-1], "/")
+	parts := strings.Split(path.String(), Separator)
+	absolutePath := strings.Join(parts[:len(parts)-1], Separator)
 	return NewFSPath(absolutePath)
 }
 
 func (path *FSPath) ExcludePath(excPath Path) Path {
 	eventAbsolutePath := strings.ReplaceAll(path.String(), excPath.String(), "")
-	eventAbsolutePath = strings.Trim(eventAbsolutePath, "/")
+	eventAbsolutePath = strings.Trim(eventAbsolutePath, Separator)
 	return NewFSPath(eventAbsolutePath)
 }

@@ -19,7 +19,7 @@ func checkSingleEventResult(t *testing.T, name string, expect Event, result []Ev
 }
 
 func Test_SingleEvents(t *testing.T) {
-	handler := newLinuxEventHandler()
+	handler := newEventHandler()
 	testFolder := "/tmp/fs-shadow"
 
 	file := filepath.Join(testFolder, "test.txt")
@@ -117,7 +117,7 @@ func Test_SingleEvents(t *testing.T) {
 }
 
 func Test_EventQueue(t *testing.T) {
-	handler := newLinuxEventHandler()
+	handler := newEventHandler()
 	testFolder := "/tmp/fs-shadow"
 	folder := filepath.Join(testFolder, "test")
 	folder1 := filepath.Join(testFolder, "test1")

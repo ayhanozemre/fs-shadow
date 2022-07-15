@@ -13,13 +13,13 @@ import (
 	"sync"
 )
 
-func (fn *FileNode) Rename(fromPath connector.Path, toPath connector.Path) error {
+func (fn *FileNode) Rename(fromPath connector.Path, toPath connector.Path) (*FileNode, error) {
 	node := fn.Search(fromPath.String())
 	if node == nil {
-		return errors.New("FileNode not found")
+		return node, errors.New("FileNode not found")
 	}
 	node.Name = toPath.Name()
-	return nil
+	return node, nil
 }
 
 func (fn *FileNode) Remove(absolutePath connector.Path) (err error, deletedNode *FileNode) {
@@ -101,7 +101,7 @@ func (fn *FileNode) SumUpdate(absolutePath connector.Path) error {
 }
 
 func (fn *FileNode) Search(path string) *FileNode {
-	pathExp := strings.Split(path, "/")
+	pathExp := strings.Split(path, connector.Separator)
 	if fn.Name == pathExp[0] && len(pathExp) == 1 {
 		return fn
 	}

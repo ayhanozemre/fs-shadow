@@ -3,8 +3,6 @@ package watcher
 import (
 	"github.com/ayhanozemre/fs-shadow/event"
 	connector "github.com/ayhanozemre/fs-shadow/path"
-	log "github.com/sirupsen/logrus"
-	"runtime"
 )
 
 type Watcher interface {
@@ -20,15 +18,9 @@ type Watcher interface {
 }
 
 func NewFSWatcher(fsPath string) (Watcher, error) {
-	var watcher Watcher
-	var err error
-	switch os := runtime.GOOS; os {
-	case "darwin":
-		log.Debug("OS X watcher not implemented")
-	case "windows":
-		log.Debug("windows watcher not implemented")
-	default:
-		watcher, err = NewLinuxPathWatcher(fsPath)
-	}
-	return watcher, err
+	return NewPathWatcher(fsPath)
+}
+
+func NewVirtualWatcher(fsPath string) (Watcher, error) {
+	return NewVirtualPathWatcher(fsPath)
 }

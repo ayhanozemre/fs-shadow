@@ -40,6 +40,8 @@ func (tw *TreeWatcher) Close() {
 	if err != nil {
 		log.Error(err)
 	}
+	close(tw.Events)
+	close(tw.Errors)
 }
 
 func (tw *TreeWatcher) Remove(path connector.Path) error {
@@ -97,12 +99,11 @@ func (tw *TreeWatcher) Create(path connector.Path) error {
 }
 
 func (tw *TreeWatcher) Rename(fromPath connector.Path, toPath connector.Path) error {
-	var err error
-	err = tw.FileTree.Rename(fromPath.ExcludePath(tw.ParentPath), toPath.ExcludePath(tw.ParentPath))
+	node, err := tw.FileTree.Rename(fromPath.ExcludePath(tw.ParentPath), toPath.ExcludePath(tw.ParentPath))
 	if err != nil {
 		return err
 	}
-	if fromPath.IsDir() {
+	if node.Meta.IsDir {
 		err = tw.Watcher.Remove(fromPath.String())
 		if err != nil {
 			return err
@@ -182,7 +183,7 @@ func (tw *TreeWatcher) Start() {
 	go tw.Watch()
 }
 
-func NewLinuxPathWatcher(fsPath string) (*TreeWatcher, error) {
+func NewPathWatcher(fsPath string) (*TreeWatcher, error) {
 	var err error
 	var watcher *fsnotify.Watcher
 	path := connector.NewFSPath(fsPath)
@@ -209,6 +210,8 @@ func NewLinuxPathWatcher(fsPath string) (*TreeWatcher, error) {
 		Path:         path,
 		Watcher:      watcher,
 		EventManager: event.NewEventHandler(),
+		Events:       make(chan event.Event),
+		Errors:       make(chan error),
 	}
 	err = tw.Create(path)
 	if err != nil {

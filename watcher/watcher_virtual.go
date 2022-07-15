@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ayhanozemre/fs-shadow/event"
 	"github.com/ayhanozemre/fs-shadow/filenode"
 	"github.com/ayhanozemre/fs-shadow/path"
 	"sync"
@@ -58,23 +59,54 @@ func (tw *VirtualTree) Remove(path connector.Path) error {
 	return err
 }
 
-func (tw *VirtualTree) Write(path connector.Path) error {
-	// maybe we can generate the sum for vfs
-	return nil
-}
-
-func (tw *VirtualTree) Close() {
-}
-
 func (tw *VirtualTree) Rename(fromPath connector.Path, toPath connector.Path) error {
 	tw.Lock()
 	defer tw.Unlock()
 	var err error
-	err = tw.FileTree.Rename(fromPath.ExcludePath(tw.ParentPath), toPath.ExcludePath(tw.ParentPath))
+	_, err = tw.FileTree.Rename(fromPath.ExcludePath(tw.ParentPath), toPath.ExcludePath(tw.ParentPath))
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (tw *VirtualTree) Write(path connector.Path) error {
+	return nil
+}
+
+func (tw *VirtualTree) Close() {
+	panic("not implemented ")
+}
+
+func (tw *VirtualTree) Start() {
+	panic("not implemented ")
+}
+
+func (tw *VirtualTree) Watch() {
+	panic("not implemented ")
+}
+
+func (tw *VirtualTree) Handler(e event.Event) error {
+	var err error
+	tw.Lock()
+	defer tw.Unlock()
+	fromPath := connector.NewFSPath(e.FromPath)
+
+	switch e.Type {
+	case event.Remove:
+		err = tw.Remove(fromPath)
+	case event.Write:
+		err = tw.Write(fromPath)
+	case event.Create:
+		err = tw.Create(fromPath)
+	case event.Rename:
+		toPath := connector.NewFSPath(e.ToPath)
+		err = tw.Rename(fromPath, toPath)
+	default:
+		errorMsg := fmt.Sprintf("unhandled event: %s", e.String())
+		return errors.New(errorMsg)
+	}
+	return err
 }
 
 func NewVirtualPathWatcher(virtualPath string) (*VirtualTree, error) {

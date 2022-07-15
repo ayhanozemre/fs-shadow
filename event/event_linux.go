@@ -13,7 +13,7 @@ type EventManager struct {
 	sync.Mutex
 }
 
-func newLinuxEventHandler() *EventManager {
+func newEventHandler() *EventManager {
 	return &EventManager{stack: []fsnotify.Event{}}
 }
 
@@ -36,7 +36,7 @@ func (e *EventManager) Pop() fsnotify.Event {
 	return event
 }
 
-func (e *EventManager) isCreate(e1, e2 *fsnotify.Event, e1Sum, e2Sum string) (*Event, int) {
+func (e *EventManager) isCreate(e1, e2, e3, e4, e5, e6 *fsnotify.Event, e1Sum, e2Sum string) (*Event, int) {
 	_, e1FileErr := os.Stat(e1.Name)
 
 	if e1.Op == fsnotify.Create {
@@ -89,7 +89,7 @@ func (e *EventManager) isRemove(e1, e2 *fsnotify.Event, e1Sum, e2Sum string) (*E
 	return nil, 0
 }
 
-func (e *EventManager) isRename(e1, e2, e3 *fsnotify.Event) (*Event, int) {
+func (e *EventManager) isRename(e1, e2, e3, e4, e5 *fsnotify.Event) (*Event, int) {
 	if e1.Op == fsnotify.Rename {
 		if e2 != nil && e2.Op == fsnotify.Create && e3 != nil && e3.Op == fsnotify.Rename && e1.Name == e3.Name {
 			// watcher'a eklenmis bir klasoru rename yaptigimizda bu case gerceklesecek.
@@ -118,7 +118,7 @@ func (e *EventManager) Process() []Event {
 	sl := len(e.stack)
 	var newEvents []Event
 	for {
-		var e1, e2, e3 *fsnotify.Event
+		var e1, e2, e3, e4, e5, e6 *fsnotify.Event
 		var e1Sum, e2Sum string
 		if cursor >= sl {
 			break
@@ -149,14 +149,14 @@ func (e *EventManager) Process() []Event {
 			log.Debug(event.String())
 			continue
 		}
-		if event, nc := e.isCreate(e1, e2, e1Sum, e2Sum); event != nil {
+		if event, nc := e.isCreate(e1, e2, e3, e4, e5, e6, e1Sum, e2Sum); event != nil {
 			cursor += nc
 			newEvents = append(newEvents, *event)
 			log.Debug(event.String())
 			// break and generate sum for nodeTree
 			break
 		}
-		if event, nc := e.isRename(e1, e2, e3); event != nil {
+		if event, nc := e.isRename(e1, e2, e3, e4, e5); event != nil {
 			cursor += nc
 			newEvents = append(newEvents, *event)
 			log.Debug(event.String())
