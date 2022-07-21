@@ -1,8 +1,10 @@
 package watcher
 
 import (
+	"github.com/ayhanozemre/fs-shadow/event"
 	"github.com/ayhanozemre/fs-shadow/filenode"
 	connector "github.com/ayhanozemre/fs-shadow/path"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"path/filepath"
 	"testing"
@@ -10,10 +12,29 @@ import (
 
 func Test_VirtualWatcherUseCase(t *testing.T) {
 	root := "fs-shadow"
-	watcher, err := NewVirtualPathWatcher(root)
+	tw, _, err := NewVirtualPathWatcher(root, &filenode.ExtraPayload{UUID: uuid.New().String()})
 	assert.Equal(t, nil, err, "watcher creation error")
 
-	watcher.Close()
+	newPath := connector.NewVirtualPath(filepath.Join(root, "test-1"), true)
+	// Create
+	e := event.Event{FromPath: newPath, Type: event.Create}
+	_, err = tw.Handler(e, &filenode.ExtraPayload{UUID: uuid.New().String()})
+	assert.Equal(t, nil, err, "folder creation error")
+	assert.Equal(t, newPath.Name(), tw.FileTree.Subs[0].Name, "create:invalid file name")
+
+	// Rename
+	renameNewPath := connector.NewVirtualPath(filepath.Join(root, "test-2"), true)
+	e = event.Event{FromPath: newPath, ToPath: renameNewPath, Type: event.Rename}
+	_, err = tw.Handler(e, nil)
+	assert.Equal(t, nil, err, "folder rename error")
+	assert.Equal(t, renameNewPath.Name(), tw.FileTree.Subs[0].Name, "rename:invalid file name")
+
+	// Remove
+	e = event.Event{FromPath: renameNewPath, Type: event.Remove}
+	_, err = tw.Handler(e, nil)
+	assert.Equal(t, nil, err, "folder remove error")
+	assert.Equal(t, 0, len(tw.FileTree.Subs), "file node not removed")
+
 }
 
 func Test_VirtualWatcherFunctionality(t *testing.T) {
@@ -25,6 +46,7 @@ func Test_VirtualWatcherFunctionality(t *testing.T) {
 
 	root := filenode.FileNode{
 		Name: path.Name(),
+		UUID: uuid.New().String(),
 		Meta: filenode.MetaData{
 			IsDir: true,
 		},
@@ -36,34 +58,42 @@ func Test_VirtualWatcherFunctionality(t *testing.T) {
 		Path:       path,
 	}
 
-	err = tw.Create(path)
+	_, err = tw.Create(path, &filenode.ExtraPayload{UUID: uuid.New().String()})
 	assert.Equal(t, nil, err, "root node creation error")
 
 	// Create folder
 	newFolder := connector.NewVirtualPath(filepath.Join(testRoot, "folder"), true)
-	err = tw.Create(newFolder)
+	_, err = tw.Create(newFolder, &filenode.ExtraPayload{UUID: uuid.New().String()})
 	assert.Equal(t, nil, err, "folder node creation error")
 	assert.Equal(t, newFolder.Name(), tw.FileTree.Subs[0].Name, "create:invalid folder name")
 
 	// Create file
 	newFile := connector.NewVirtualPath(filepath.Join(testRoot, "file.txt"), false)
-	err = tw.Create(newFile)
+	_, err = tw.Create(newFile, &filenode.ExtraPayload{UUID: uuid.New().String()})
 	assert.Equal(t, nil, err, "file node creation error")
 	assert.Equal(t, newFile.Name(), tw.FileTree.Subs[1].Name, "create:invalid file name")
 
 	// Rename
 	renameFilePath := connector.NewVirtualPath(filepath.Join(testRoot, "file-rename.txt"), false)
-	err = tw.Rename(newFile, renameFilePath)
+	_, err = tw.Rename(newFile, renameFilePath)
 	assert.Equal(t, nil, err, "file node rename error")
 	assert.Equal(t, renameFilePath.Name(), tw.FileTree.Subs[1].Name, "rename:filename is not changed")
 
 	// Write
-	err = tw.Write(renameFilePath)
+	_, err = tw.Write(renameFilePath)
 	assert.Equal(t, nil, err, "file node write error")
 
 	// Remove
-	err = tw.Remove(renameFilePath)
+	_, err = tw.Remove(renameFilePath)
 	assert.Equal(t, nil, err, "file node remove error")
 	assert.Equal(t, 1, len(root.Subs), "file node not removed")
+}
+
+func Test_Restore(t *testing.T) {
+	root := "fs-shadow"
+	tw, _, err := NewVirtualPathWatcher(root, &filenode.ExtraPayload{UUID: uuid.New().String()})
+	assert.Equal(t, nil, err, "watcher creation error")
+	tw.Restore(&filenode.FileNode{Name: "new-tree"})
+	assert.Equal(t, "new-tree", tw.FileTree.Name, "tree updated error")
 
 }

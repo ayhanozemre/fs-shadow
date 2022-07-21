@@ -1,6 +1,7 @@
 package event
 
 import (
+	connector "github.com/ayhanozemre/fs-shadow/path"
 	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
 	"os"
@@ -42,16 +43,16 @@ func (e *EventManager) isCreate(e1, e2, e3, e4, e5, e6 *fsnotify.Event, e1Sum, e
 	if e1.Op == fsnotify.Create {
 		if e2 == nil {
 			log.Debug("create1")
-			return &Event{FromPath: e1.Name, Type: Create}, 1
+			return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Create}, 1
 		} else if e2.Op == fsnotify.Chmod && e1.Name == e2.Name {
 			log.Debug("create2")
-			return &Event{FromPath: e1.Name, Type: Create}, 2
+			return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Create}, 2
 		} else if e2.Op == fsnotify.Rename && e1.Name == e2.Name && e1Sum == e2Sum && e1FileErr == nil {
 			log.Debug("create3")
-			return &Event{FromPath: e1.Name, Type: Create}, 2
+			return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Create}, 2
 		} else {
 			log.Debug("create4")
-			return &Event{FromPath: e1.Name, Type: Create}, 1
+			return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Create}, 1
 		}
 	}
 	return nil, 0
@@ -63,28 +64,28 @@ func (e *EventManager) isRemove(e1, e2 *fsnotify.Event, e1Sum, e2Sum string) (*E
 	if e1.Op == fsnotify.Remove && e2 != nil && e2.Op == fsnotify.Remove && e1.Name == e2.Name {
 		// watcher'a eklenmis bir klasoru sildigimizde bu case gerceklesecek.
 		log.Debug("remove1")
-		return &Event{FromPath: e1.Name, Type: Remove}, 2
+		return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Remove}, 2
 	}
 
 	if e1.Op == fsnotify.Rename && e2 != nil && e2.Op == fsnotify.Rename && e1.Name == e2.Name && os.IsNotExist(e1FileErr) {
 		// watcher'a eklenmis bir klasoru watch etmedigimiz bir klasore tasirsak bu case gerceklesecek
 		log.Debug("remove2")
-		return &Event{FromPath: e1.Name, Type: Remove}, 2
+		return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Remove}, 2
 	}
 
 	if e1.Op == fsnotify.Rename && e2 != nil && e2.Op == fsnotify.Create && e1Sum != e2Sum {
 		log.Debug("extremeRemove")
-		return &Event{FromPath: e1.Name, Type: Remove}, 1
+		return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Remove}, 1
 	}
 
 	if e1.Op == fsnotify.Rename && e2 == nil && os.IsNotExist(e1FileErr) {
 		log.Debug("remove4")
-		return &Event{FromPath: e1.Name, Type: Remove}, 1
+		return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Remove}, 1
 	}
 
 	if e1.Op == fsnotify.Remove {
 		log.Debug("remove5")
-		return &Event{FromPath: e1.Name, Type: Remove}, 1
+		return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Remove}, 1
 	}
 	return nil, 0
 }
@@ -94,11 +95,11 @@ func (e *EventManager) isRename(e1, e2, e3, e4, e5 *fsnotify.Event) (*Event, int
 		if e2 != nil && e2.Op == fsnotify.Create && e3 != nil && e3.Op == fsnotify.Rename && e1.Name == e3.Name {
 			// watcher'a eklenmis bir klasoru rename yaptigimizda bu case gerceklesecek.
 			log.Debug("rename1")
-			return &Event{FromPath: e1.Name, ToPath: e2.Name, Type: Rename}, 3
+			return &Event{FromPath: connector.NewFSPath(e1.Name), ToPath: connector.NewFSPath(e2.Name), Type: Rename}, 3
 		} else if e2 != nil && e2.Op == fsnotify.Create && e1.Name != e2.Name {
 			// watcher'a eklenmemis bir klasoru rename yaptigimizda bu case gerceklesecek.
 			log.Debug("rename2")
-			return &Event{FromPath: e1.Name, ToPath: e2.Name, Type: Rename}, 2
+			return &Event{FromPath: connector.NewFSPath(e1.Name), ToPath: connector.NewFSPath(e2.Name), Type: Rename}, 2
 		}
 	}
 	return nil, 0
@@ -106,7 +107,7 @@ func (e *EventManager) isRename(e1, e2, e3, e4, e5 *fsnotify.Event) (*Event, int
 
 func (e *EventManager) isWrite(e1 *fsnotify.Event) (*Event, int) {
 	if e1.Op == fsnotify.Write {
-		return &Event{FromPath: e1.Name, Type: Rename}, 1
+		return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Rename}, 1
 	}
 	return nil, 0
 }

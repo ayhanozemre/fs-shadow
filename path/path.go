@@ -1,5 +1,10 @@
 package connector
 
+type Params struct {
+	From Path
+	To   Path
+}
+
 type Path interface {
 	IsVirtual() bool
 	IsDir() bool

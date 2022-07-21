@@ -14,13 +14,20 @@ type MetaData struct {
 }
 
 type FileNode struct {
-	Subs []*FileNode `json:"subs"`
-	Name string      `json:"name"`
-	Meta MetaData    `json:"-"`
+	Subs       []*FileNode `json:"subs"`
+	Name       string      `json:"name"`
+	UUID       string      `json:"uuid"`
+	ParentUUID string      `json:"parent_uuid"`
+	Meta       MetaData    `json:"-"`
 }
 
 type FileTree struct {
 	Path    connector.Path
 	Tree    *FileNode
 	Watcher *fsnotify.Watcher
+}
+
+type ExtraPayload struct {
+	UUID         string
+	AbsolutePath string
 }

@@ -11,6 +11,8 @@ import (
 	"os"
 )
 
+const FolderDeepLimit = 100
+
 func Sum(path connector.Path) (string, error) {
 	if path.IsDir() {
 		return FolderSum(path.String())
@@ -19,13 +21,12 @@ func Sum(path connector.Path) (string, error) {
 }
 
 func FolderSum(path string) (string, error) {
-	deepLimit := 100
 	deepCount := 0
 	var buff bytes.Buffer
 
 	files, _ := ioutil.ReadDir(path)
 	for _, p := range files {
-		if deepLimit == deepCount {
+		if FolderDeepLimit == deepCount {
 			break
 		}
 		buff.WriteString(p.Name())
@@ -36,9 +37,9 @@ func FolderSum(path string) (string, error) {
 		p, _ := os.Stat(path)
 		buff.WriteString(fmt.Sprint(p.ModTime().Unix()))
 	}
-	hasher := sha256.New()
-	hasher.Write(buff.Bytes())
-	value := hex.EncodeToString(hasher.Sum(nil))
+	h := sha256.New()
+	h.Write(buff.Bytes())
+	value := hex.EncodeToString(h.Sum(nil))
 	return value, nil
 }
 
@@ -49,10 +50,10 @@ func FileSum(path string) (string, error) {
 	}
 	defer f.Close()
 
-	hasher := sha256.New()
-	if _, err := io.Copy(hasher, f); err != nil {
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
 		return "", err
 	}
-	value := hex.EncodeToString(hasher.Sum(nil))
+	value := hex.EncodeToString(h.Sum(nil))
 	return value, nil
 }

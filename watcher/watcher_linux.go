@@ -19,7 +19,7 @@ type TreeWatcher struct {
 	Path       connector.Path
 	ParentPath connector.Path
 
-	Events chan event.Event // bu channel'i servislere verecegiz. not implemented
+	Events chan EventTransaction // bu channel'i servislere verecegiz. not implemented
 	Errors chan error
 
 	sync.Mutex
@@ -44,30 +44,32 @@ func (tw *TreeWatcher) Close() {
 	close(tw.Errors)
 }
 
-func (tw *TreeWatcher) Remove(path connector.Path) error {
+func (tw *TreeWatcher) Remove(path connector.Path) (*filenode.FileNode, error) {
 	eventPath := path.ExcludePath(tw.ParentPath)
-	err, node := tw.FileTree.Remove(eventPath)
+	node, err := tw.FileTree.Remove(eventPath)
 	if err == nil && node != nil && node.Meta.IsDir {
 		err = tw.Watcher.Remove(path.String())
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return err
+	return node, err
 }
 
-func (tw *TreeWatcher) Write(path connector.Path) error {
+func (tw *TreeWatcher) Write(path connector.Path) (*filenode.FileNode, error) {
+	var node *filenode.FileNode
+	var err error
 	if !path.IsDir() {
 		eventPath := path.ExcludePath(tw.ParentPath)
-		err := tw.FileTree.Update(eventPath, path)
-		return err
+		node, err = tw.FileTree.Update(eventPath, path)
+		return nil, err
 	}
-	return nil
+	return node, err
 }
 
-func (tw *TreeWatcher) Create(path connector.Path) error {
+func (tw *TreeWatcher) Create(path connector.Path, extra *filenode.ExtraPayload) (*filenode.FileNode, error) {
 	if !path.Exists() {
-		return errors.New("file path does not exist")
+		return nil, errors.New("file path does not exist")
 	}
 
 	eventPath := path.ExcludePath(tw.ParentPath)
@@ -92,48 +94,52 @@ func (tw *TreeWatcher) Create(path connector.Path) error {
 		}
 	}()
 
-	err := tw.FileTree.Create(eventPath, path, eventCh)
+	node, err := tw.FileTree.Create(eventPath, path, eventCh)
 	eventCh <- nil
 	close(eventCh)
-	return err
+	return node, err
 }
 
-func (tw *TreeWatcher) Rename(fromPath connector.Path, toPath connector.Path) error {
+func (tw *TreeWatcher) Rename(fromPath connector.Path, toPath connector.Path) (*filenode.FileNode, error) {
 	node, err := tw.FileTree.Rename(fromPath.ExcludePath(tw.ParentPath), toPath.ExcludePath(tw.ParentPath))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if node.Meta.IsDir {
 		err = tw.Watcher.Remove(fromPath.String())
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		err = tw.Watcher.Add(toPath.String())
 	}
-	return err
+	return node, err
 }
 
-func (tw *TreeWatcher) Handler(e event.Event) (err error) {
+func (tw *TreeWatcher) Handler(e event.Event, extra *filenode.ExtraPayload) (*EventTransaction, error) {
 	tw.Lock()
+	var err error
+	var node *filenode.FileNode
 	defer tw.Unlock()
-	fromPath := connector.NewFSPath(e.FromPath)
 
 	switch e.Type {
 	case event.Remove:
-		err = tw.Remove(fromPath)
+		node, err = tw.Remove(e.FromPath)
 	case event.Write:
-		err = tw.Write(fromPath)
+		node, err = tw.Write(e.FromPath)
 	case event.Create:
-		err = tw.Create(fromPath)
+		node, err = tw.Create(e.FromPath, extra)
 	case event.Rename:
-		toPath := connector.NewFSPath(e.ToPath)
-		err = tw.Rename(fromPath, toPath)
+		node, err = tw.Rename(e.FromPath, e.ToPath)
 	default:
 		errorMsg := fmt.Sprintf("unhandled event: op:%s, path:%s", e.Type, e.FromPath)
-		return errors.New(errorMsg)
+		err = errors.New(errorMsg)
 	}
-	return err
+	if err != nil {
+		return nil, err
+	}
+	et := makeEventTransaction(*node, e.Type)
+	return et, err
 }
 
 func (tw *TreeWatcher) Watch() {
@@ -170,7 +176,7 @@ func (tw *TreeWatcher) Start() {
 				if tw.EventManager.StackLength() > 0 {
 					newEvents := tw.EventManager.Process()
 					for _, e := range newEvents {
-						err := tw.Handler(e)
+						_, err := tw.Handler(e, nil)
 						if err != nil {
 							// event channel update
 							fmt.Println(err)
@@ -183,18 +189,22 @@ func (tw *TreeWatcher) Start() {
 	go tw.Watch()
 }
 
-func NewPathWatcher(fsPath string) (*TreeWatcher, error) {
+func (tw *TreeWatcher) Restore(tree *filenode.FileNode) {
+	tw.FileTree = tree
+}
+
+func NewPathWatcher(fsPath string) (*TreeWatcher, *EventTransaction, error) {
 	var err error
 	var watcher *fsnotify.Watcher
 	path := connector.NewFSPath(fsPath)
 	if !path.IsDir() {
 		err = errors.New("input path is not directory")
-		return nil, err
+		return nil, nil, err
 	}
 
 	watcher, err = fsnotify.NewWatcher()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	root := filenode.FileNode{
@@ -210,13 +220,14 @@ func NewPathWatcher(fsPath string) (*TreeWatcher, error) {
 		Path:         path,
 		Watcher:      watcher,
 		EventManager: event.NewEventHandler(),
-		Events:       make(chan event.Event),
+		Events:       make(chan EventTransaction),
 		Errors:       make(chan error),
 	}
-	err = tw.Create(path)
+	e := event.Event{FromPath: path, Type: event.Create}
+	txn, err := tw.Handler(e, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	tw.Start()
-	return &tw, nil
+	return &tw, txn, nil
 }

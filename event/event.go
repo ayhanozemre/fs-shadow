@@ -2,6 +2,7 @@ package event
 
 import (
 	"fmt"
+	connector "github.com/ayhanozemre/fs-shadow/path"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -35,15 +36,15 @@ const (
 
 type Event struct {
 	Type     EventType
-	FromPath string
-	ToPath   string
+	FromPath connector.Path
+	ToPath   connector.Path
 }
 
 func (e Event) String() string {
-	s := fmt.Sprintf("rsult %s", e.FromPath)
+	s := fmt.Sprintf("rsult %s", e.FromPath.String())
 	if e.Type == Rename {
-		s += fmt.Sprintf(" -> %s", e.ToPath)
+		s += fmt.Sprintf(" -> %s", e.ToPath.String())
 	}
-	s += fmt.Sprintf(" [%s]", e.Type)
+	s += fmt.Sprintf(" [%s]", e.Type.String())
 	return s
 }

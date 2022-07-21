@@ -16,7 +16,7 @@ func Test_LinuxWatcherUseCase(t *testing.T) {
 	testRoot := "/tmp/fs-shadow"
 	_ = os.Mkdir(testRoot, os.ModePerm)
 
-	tw, err := NewPathWatcher(testRoot)
+	tw, _, err := NewPathWatcher(testRoot)
 	assert.Equal(t, nil, err, "linux patch watcher creation error")
 
 	// create folder
@@ -71,27 +71,27 @@ func Test_LinuxWatcherFunctionality(t *testing.T) {
 		Watcher:      watcher,
 		EventManager: event.NewEventHandler(),
 	}
-	err = tw.Create(path)
+	_, err = tw.Create(path, nil)
 	assert.Equal(t, nil, err, "root node creation error")
 
 	// Create folder
 	newFolder := connector.NewFSPath(filepath.Join(testRoot, "folder"))
 	_ = os.Mkdir(newFolder.String(), os.ModePerm)
-	err = tw.Create(newFolder)
+	_, err = tw.Create(newFolder, nil)
 	assert.Equal(t, nil, err, "folder node creation error")
 	assert.Equal(t, newFolder.Name(), tw.FileTree.Subs[0].Name, "create:invalid folder name")
 
 	// Create file
 	newFile := connector.NewFSPath(filepath.Join(testRoot, "file.txt"))
 	_, _ = os.Create(newFile.String())
-	err = tw.Create(newFile)
+	_, err = tw.Create(newFile, nil)
 	assert.Equal(t, nil, err, "file node creation error")
 	assert.Equal(t, newFile.Name(), tw.FileTree.Subs[1].Name, "create:invalid file name")
 
 	// Rename
 	renameFilePath := connector.NewFSPath(filepath.Join(testRoot, "file-rename.txt"))
 	_ = os.Rename(newFile.String(), renameFilePath.String())
-	err = tw.Rename(newFile, renameFilePath)
+	_, err = tw.Rename(newFile, renameFilePath)
 	assert.Equal(t, nil, err, "file node rename error")
 	assert.Equal(t, renameFilePath.Name(), tw.FileTree.Subs[1].Name, "rename:filename is not changed")
 
@@ -105,13 +105,13 @@ func Test_LinuxWatcherFunctionality(t *testing.T) {
 	_, err = f.WriteString("test")
 	_ = f.Close()
 
-	err = tw.Write(renameFilePath)
+	_, err = tw.Write(renameFilePath)
 	assert.Equal(t, nil, err, "file node write error")
 	node = tw.FileTree.Search(renameEventFilePath.String())
 	assert.NotEqual(t, oldSum, node.Meta.Sum, "updated file sums not equal")
 
 	// Remove
-	err = tw.Remove(renameFilePath)
+	_, err = tw.Remove(renameFilePath)
 	assert.Equal(t, nil, err, "file node remove error")
 	assert.Equal(t, 1, len(root.Subs), "file node not removed")
 
@@ -119,8 +119,8 @@ func Test_LinuxWatcherFunctionality(t *testing.T) {
 	// Handler Create
 	handlerTestFile := connector.NewFSPath(filepath.Join(testRoot, "new-file.txt"))
 	_, _ = os.Create(handlerTestFile.String())
-	e = event.Event{FromPath: handlerTestFile.String(), Type: event.Create}
-	err = tw.Handler(e)
+	e = event.Event{FromPath: handlerTestFile, Type: event.Create}
+	_, err = tw.Handler(e, nil)
 	assert.Equal(t, nil, err, "handler creation error")
 	assert.Equal(t, handlerTestFile.Name(), tw.FileTree.Subs[1].Name, "handler: filename mismatch error")
 
@@ -130,24 +130,24 @@ func Test_LinuxWatcherFunctionality(t *testing.T) {
 	_, err = f.WriteString("handler-write")
 	_ = f.Close()
 
-	e = event.Event{FromPath: handlerTestFile.String(), Type: event.Write}
-	err = tw.Handler(e)
+	e = event.Event{FromPath: handlerTestFile, Type: event.Write}
+	_, err = tw.Handler(e, nil)
 	assert.Equal(t, nil, err, "handler write error")
 	assert.NotEqual(t, oldSum, tw.FileTree.Subs[1].Meta.Sum, "handler: file sum mismatch")
 
 	// Handler Rename
 	handlerRenameTestFile := connector.NewFSPath(filepath.Join(testRoot, "new-file-rename.txt"))
 	_ = os.Rename(handlerTestFile.String(), handlerRenameTestFile.String())
-	e = event.Event{FromPath: handlerTestFile.String(), ToPath: handlerRenameTestFile.String(), Type: event.Rename}
-	err = tw.Handler(e)
+	e = event.Event{FromPath: handlerTestFile, ToPath: handlerRenameTestFile, Type: event.Rename}
+	_, err = tw.Handler(e, nil)
 	assert.Equal(t, nil, err, "handler rename error")
 	assert.Equal(t, handlerRenameTestFile.Name(), tw.FileTree.Subs[1].Name, "handler: filename mismatch error")
 
 	// Handler Remove
 	handlerRenameTestFile = connector.NewFSPath(filepath.Join(testRoot, "new-file-rename.txt"))
 	_ = os.Remove(handlerRenameTestFile.String())
-	e = event.Event{FromPath: handlerRenameTestFile.String(), Type: event.Remove}
-	err = tw.Handler(e)
+	e = event.Event{FromPath: handlerRenameTestFile, Type: event.Remove}
+	_, err = tw.Handler(e, nil)
 	assert.Equal(t, nil, err, "handler remove error")
 	assert.Equal(t, len(tw.FileTree.Subs), 1, "handler: root subs length error")
 

@@ -8,7 +8,7 @@ import (
 func main() {
 	log.SetLevel(log.DebugLevel)
 	//tw, err := watcher.NewVirtualPathWatcher("/home/wade/Desktop/TransferChain")
-	tw, err := watcher.NewFSWatcher("/home/wade/Desktop/TransferChain")
+	tw, _, err := watcher.NewFSWatcher("/home/wade/Desktop/TransferChain")
 
 	if err == nil {
 		tw.PrintTree("INIT TREE")

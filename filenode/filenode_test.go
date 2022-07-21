@@ -2,12 +2,28 @@ package filenode
 
 import (
 	connector "github.com/ayhanozemre/fs-shadow/path"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 )
+
+func makeDummyTree() *FileNode {
+	rootUUID := uuid.NewString()
+	root := FileNode{
+		Name: "alphabet",
+		UUID: rootUUID,
+		Subs: []*FileNode{
+			{Name: "a", UUID: uuid.NewString(), ParentUUID: rootUUID},
+			{Name: "b", UUID: uuid.NewString(), ParentUUID: rootUUID},
+			{Name: "c", UUID: uuid.NewString(), ParentUUID: rootUUID},
+			{Name: "d", UUID: uuid.NewString(), ParentUUID: rootUUID},
+		},
+	}
+	return &root
+}
 
 func Test_WalkOnFsPath(t *testing.T) {
 	testFolder := "/tmp/fs-shadow"
@@ -91,13 +107,13 @@ func Test_FileNode(t *testing.T) {
 		}
 	}()
 
-	err = root.Create(eventFolderPath, folderPath, eventCh)
+	_, err = root.Create(eventFolderPath, folderPath, eventCh)
 	assert.Equal(t, nil, err, "folder creation error")
 	folderNode := root.Subs[0]
 	assert.Equal(t, true, folderNode.Meta.IsDir, "folder node is not dir")
 	assert.Equal(t, "eae6903bedc6d6aef6eb50f23865dd544469f83e9662171081881a23f1fc79b3", folderNode.Meta.Sum, "invalid folder sum")
 
-	err = root.Create(eventFilePath, filePath, eventCh)
+	_, err = root.Create(eventFilePath, filePath, eventCh)
 	assert.Equal(t, nil, err, "file creation error")
 	fileNode := root.Subs[1]
 	assert.Equal(t, false, fileNode.Meta.IsDir, "file node is not file")
@@ -116,19 +132,19 @@ func Test_FileNode(t *testing.T) {
 	f, _ := os.OpenFile(emptyFile, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	_, err = f.WriteString("test")
 	_ = f.Close()
-	err = root.Update(eventFilePath, filePath)
+	_, err = root.Update(eventFilePath, filePath)
 	assert.Equal(t, nil, err, "update error")
 	assert.NotEqual(t, oldSum, fileNode.Meta.Sum, "updated file sums not equal")
 
 	// Rename
 	oldName := fileNode.Name
-	err = root.Rename(eventFilePath, renameEventFilePath)
+	_, err = root.Rename(eventFilePath, renameEventFilePath)
 	assert.Equal(t, nil, err, "rename error")
 	assert.NotEqual(t, oldName, fileNode.Name, "rename process error")
 	_ = os.Rename(filePath.String(), renameFilePath.String())
 
 	// Remove
-	err, _ = root.Remove(eventFolderPath)
+	_, err = root.Remove(eventFolderPath)
 	assert.Equal(t, nil, err, "remove error")
 	deletedNode := root.Search(eventFolderPath.String())
 	assert.Nil(t, deletedNode, "remove process error")
@@ -146,4 +162,46 @@ func Test_FileNode(t *testing.T) {
 	assert.NotEqual(t, oldSum, node.Meta.Sum, "sums not equal")
 
 	_ = os.RemoveAll(testFolder)
+}
+
+func Test_UpdateWithExtra(t *testing.T) {
+	node := FileNode{Name: "test", UUID: uuid.NewString()}
+	newUUID := uuid.NewString()
+	node.UpdateWithExtra(ExtraPayload{UUID: newUUID})
+	assert.Equal(t, newUUID, node.UUID, "uuid not updating")
+}
+
+func Test_DeleteByUUID(t *testing.T) {
+	tree := makeDummyTree()
+	treeSubLength := len(tree.Subs)
+
+	nodeUUID := tree.Subs[0].UUID
+	_, err := tree.RemoveByUUID(nodeUUID, tree.UUID)
+	assert.Equal(t, nil, err, "delete process error")
+	assert.Equal(t, treeSubLength-1, len(tree.Subs), "delete process error")
+}
+
+func Test_SearchByUUID(t *testing.T) {
+	tree := makeDummyTree()
+	nodeUUID := tree.Subs[0].UUID
+	node := tree.SearchByUUID(nodeUUID)
+	assert.Equal(t, nodeUUID, node.UUID, "invalid node")
+}
+
+func Test_RemoveCore(t *testing.T) {
+	tree := makeDummyTree()
+	treeSubLength := len(tree.Subs)
+
+	nodeUUID := tree.Subs[1].UUID
+	node, err := tree._remove(tree, nodeUUID, "uuid")
+	assert.Equal(t, nil, err, "delete process error")
+	assert.Equal(t, nodeUUID, node.UUID, "invalid node")
+	assert.Equal(t, treeSubLength-1, len(tree.Subs), "delete process error")
+
+	nodeName := tree.Subs[1].Name
+	node, err = tree._remove(tree, nodeName)
+	assert.Equal(t, nil, err, "delete process error")
+	assert.Equal(t, nodeName, node.Name, "invalid node")
+	assert.Equal(t, treeSubLength-2, len(tree.Subs), "delete process error")
+
 }

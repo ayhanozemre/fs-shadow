@@ -27,89 +27,77 @@ func (tw *VirtualTree) PrintTree(label string) {
 	fmt.Println(bannerEndLine)
 }
 
-func (tw *VirtualTree) Create(path connector.Path) error {
-	tw.Lock()
-	defer tw.Unlock()
-	if !path.Exists() {
-		return errors.New("file path does not exist")
-	}
-
+func (tw *VirtualTree) Create(path connector.Path, extra *filenode.ExtraPayload) (*filenode.FileNode, error) {
 	eventPath := path.ExcludePath(tw.ParentPath)
-	eventCh := make(chan connector.Path)
-	go func() {
-		for {
-			select {
-			case p := <-eventCh:
-				if p != nil {
-					//
-				}
-			}
-		}
-	}()
-	err := tw.FileTree.Create(eventPath, path, eventCh)
-	close(eventCh)
-	return err
-}
-
-func (tw *VirtualTree) Remove(path connector.Path) error {
-	tw.Lock()
-	defer tw.Unlock()
-	eventPath := path.ExcludePath(tw.ParentPath)
-	err, _ := tw.FileTree.Remove(eventPath)
-	return err
-}
-
-func (tw *VirtualTree) Rename(fromPath connector.Path, toPath connector.Path) error {
-	tw.Lock()
-	defer tw.Unlock()
-	var err error
-	_, err = tw.FileTree.Rename(fromPath.ExcludePath(tw.ParentPath), toPath.ExcludePath(tw.ParentPath))
+	node, err := tw.FileTree.Create(eventPath, path)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	node.UpdateWithExtra(*extra)
+	return node, nil
 }
 
-func (tw *VirtualTree) Write(path connector.Path) error {
-	return nil
+func (tw *VirtualTree) Remove(path connector.Path) (*filenode.FileNode, error) {
+	eventPath := path.ExcludePath(tw.ParentPath)
+	node, err := tw.FileTree.Remove(eventPath)
+	return node, err
+}
+
+func (tw *VirtualTree) Rename(fromPath connector.Path, toPath connector.Path) (*filenode.FileNode, error) {
+	node, err := tw.FileTree.Rename(fromPath.ExcludePath(tw.ParentPath), toPath.ExcludePath(tw.ParentPath))
+	if err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
+func (tw *VirtualTree) Write(path connector.Path) (*filenode.FileNode, error) {
+	return nil, nil
 }
 
 func (tw *VirtualTree) Close() {
-	panic("not implemented ")
+	panic("close not implemented ")
 }
 
 func (tw *VirtualTree) Start() {
-	panic("not implemented ")
+	panic("start not implemented ")
 }
 
 func (tw *VirtualTree) Watch() {
-	panic("not implemented ")
+	panic("watch not implemented ")
 }
 
-func (tw *VirtualTree) Handler(e event.Event) error {
+func (tw *VirtualTree) Handler(e event.Event, extra *filenode.ExtraPayload) (*EventTransaction, error) {
 	var err error
+	var node *filenode.FileNode
 	tw.Lock()
 	defer tw.Unlock()
-	fromPath := connector.NewFSPath(e.FromPath)
 
 	switch e.Type {
 	case event.Remove:
-		err = tw.Remove(fromPath)
+		node, err = tw.Remove(e.FromPath)
 	case event.Write:
-		err = tw.Write(fromPath)
+		node, err = tw.Write(e.FromPath)
 	case event.Create:
-		err = tw.Create(fromPath)
+		node, err = tw.Create(e.FromPath, extra)
 	case event.Rename:
-		toPath := connector.NewFSPath(e.ToPath)
-		err = tw.Rename(fromPath, toPath)
+		node, err = tw.Rename(e.FromPath, e.ToPath)
 	default:
 		errorMsg := fmt.Sprintf("unhandled event: %s", e.String())
-		return errors.New(errorMsg)
+		err = errors.New(errorMsg)
 	}
-	return err
+	if err != nil {
+		return nil, err
+	}
+	et := makeEventTransaction(*node, e.Type)
+	return et, err
 }
 
-func NewVirtualPathWatcher(virtualPath string) (*VirtualTree, error) {
+func (tw *VirtualTree) Restore(tree *filenode.FileNode) {
+	tw.FileTree = tree
+}
+
+func NewVirtualPathWatcher(virtualPath string, extra *filenode.ExtraPayload) (*VirtualTree, *EventTransaction, error) {
 	path := connector.NewVirtualPath(virtualPath, true)
 
 	root := filenode.FileNode{
@@ -124,9 +112,11 @@ func NewVirtualPathWatcher(virtualPath string) (*VirtualTree, error) {
 		ParentPath: path.ParentPath(),
 		Path:       path,
 	}
-	err := tw.Create(path)
+	e := event.Event{FromPath: path, Type: event.Create}
+
+	txn, err := tw.Handler(e, extra)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return &tw, nil
+	return &tw, txn, nil
 }
