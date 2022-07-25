@@ -7,8 +7,7 @@ import (
 
 func main() {
 	log.SetLevel(log.DebugLevel)
-	//tw, _, err := watcher.NewFSWatcher("/tmp/root")
-	tw, _, err := watcher.NewFSWatcher("/home/wade/Desktop/TransferChain")
+	tw, _, err := watcher.NewFSWatcher("/tmp/root")
 
 	if err == nil {
 		tw.PrintTree("INIT TREE")
