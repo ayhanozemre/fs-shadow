@@ -11,7 +11,7 @@ func CreateFileNodeWithTransactions(tbl [][]byte) (*filenode.FileNode, error) {
 	uuidTable := make(map[string]*filenode.FileNode)
 	for i := 0; i < len(tbl); i++ {
 		txn := EventTransaction{}
-		err = txn.decompress(tbl[i])
+		err = txn.Decode(tbl[i])
 		if err != nil {
 			return nil, err
 		}

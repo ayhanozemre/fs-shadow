@@ -2,6 +2,7 @@ package event
 
 import (
 	"fmt"
+	connector "github.com/ayhanozemre/fs-shadow/path"
 	"github.com/fsnotify/fsnotify"
 	"os"
 	"path/filepath"
@@ -11,7 +12,7 @@ import (
 func checkSingleEventResult(t *testing.T, name string, expect Event, result []Event) {
 	if len(result) != 0 {
 		firstResult := result[0]
-		if expect != result[0] {
+		if expect.String() != result[0].String() {
 			message := fmt.Sprintf("[%s] exceptType:%s resultType:%s", name, expect.Type, firstResult.Type)
 			t.Fatalf(message)
 		}
@@ -35,7 +36,7 @@ func Test_SingleEvents(t *testing.T) {
 	//mkdir /tmp/fs-shadow/test
 	_ = os.Mkdir(folder, os.ModePerm)
 	handler.Append(fsnotify.Event{Name: folder, Op: fsnotify.Create}, "")
-	checkSingleEventResult(t, "[1] create folder", Event{FromPath: folder, Type: Create}, handler.Process())
+	checkSingleEventResult(t, "[1] create folder", Event{FromPath: connector.NewFSPath(folder), Type: Create}, handler.Process())
 	_ = os.Remove(folder)
 
 	//touch /tmp/fs-shadow/test.txt
@@ -43,7 +44,7 @@ func Test_SingleEvents(t *testing.T) {
 	_ = emptyFile.Close()
 	handler.Append(fsnotify.Event{Name: file, Op: fsnotify.Create}, "")
 	handler.Append(fsnotify.Event{Name: file, Op: fsnotify.Chmod}, "")
-	checkSingleEventResult(t, "[2] create file", Event{FromPath: file, Type: Create}, handler.Process())
+	checkSingleEventResult(t, "[2] create file", Event{FromPath: connector.NewFSPath(file), Type: Create}, handler.Process())
 	_ = os.Remove(file)
 
 	/*
@@ -62,7 +63,7 @@ func Test_SingleEvents(t *testing.T) {
 	_ = os.Mkdir(folder, os.ModePerm)
 	handler.Append(fsnotify.Event{Name: folder, Op: fsnotify.Create}, "")
 	handler.Append(fsnotify.Event{Name: folder, Op: fsnotify.Rename}, "")
-	checkSingleEventResult(t, "[4] w create outside to inside", Event{FromPath: folder, Type: Create}, handler.Process())
+	checkSingleEventResult(t, "[4] w create outside to inside", Event{FromPath: connector.NewFSPath(folder), Type: Create}, handler.Process())
 	_ = os.Remove(folder)
 
 	//-------------------------------------------------------------------------------------
@@ -71,20 +72,20 @@ func Test_SingleEvents(t *testing.T) {
 	// watcher active; rm -rf
 	handler.Append(fsnotify.Event{Name: file, Op: fsnotify.Remove}, "")
 	handler.Append(fsnotify.Event{Name: file, Op: fsnotify.Remove}, "")
-	checkSingleEventResult(t, "[1] w remove file", Event{FromPath: file, Type: Remove}, handler.Process())
+	checkSingleEventResult(t, "[1] w remove file", Event{FromPath: connector.NewFSPath(file), Type: Remove}, handler.Process())
 
 	// watcher active; mv test /tmp/
 	handler.Append(fsnotify.Event{Name: file, Op: fsnotify.Rename}, "")
 	handler.Append(fsnotify.Event{Name: file, Op: fsnotify.Rename}, "")
-	checkSingleEventResult(t, "[2] w remove file", Event{FromPath: file, Type: Remove}, handler.Process())
+	checkSingleEventResult(t, "[2] w remove file", Event{FromPath: connector.NewFSPath(file), Type: Remove}, handler.Process())
 
 	// watcher inactive. file or folder doesn't matter; mv test /tmp/
 	handler.Append(fsnotify.Event{Name: file, Op: fsnotify.Rename}, "")
-	checkSingleEventResult(t, "[3] remove file", Event{FromPath: file, Type: Remove}, handler.Process())
+	checkSingleEventResult(t, "[3] remove file", Event{FromPath: connector.NewFSPath(file), Type: Remove}, handler.Process())
 
 	// watcher inactive; rm -rf
 	handler.Append(fsnotify.Event{Name: file, Op: fsnotify.Remove}, "")
-	checkSingleEventResult(t, "[4] w remove file", Event{FromPath: file, Type: Remove}, handler.Process())
+	checkSingleEventResult(t, "[4] w remove file", Event{FromPath: connector.NewFSPath(file), Type: Remove}, handler.Process())
 
 	//-------------------------------------------------------------------------------------
 	// rename
@@ -94,14 +95,14 @@ func Test_SingleEvents(t *testing.T) {
 	handler.Append(fsnotify.Event{Name: folder, Op: fsnotify.Rename}, "")
 	handler.Append(fsnotify.Event{Name: folder1, Op: fsnotify.Create}, "")
 	handler.Append(fsnotify.Event{Name: folder, Op: fsnotify.Rename}, "")
-	checkSingleEventResult(t, "[1] w rename folder", Event{FromPath: folder, ToPath: folder1, Type: Rename}, handler.Process())
+	checkSingleEventResult(t, "[1] w rename folder", Event{FromPath: connector.NewFSPath(folder), ToPath: connector.NewFSPath(folder1), Type: Rename}, handler.Process())
 	_ = os.Remove(folder1)
 
 	// watcher inactive; mv /tmp/fs-shadow/test /tmp/fs-shadow/test1
 	_ = os.Mkdir(folder1, os.ModePerm)
 	handler.Append(fsnotify.Event{Name: folder, Op: fsnotify.Rename}, "")
 	handler.Append(fsnotify.Event{Name: folder1, Op: fsnotify.Create}, "")
-	checkSingleEventResult(t, "[2] rename folder", Event{FromPath: folder, ToPath: folder1, Type: Rename}, handler.Process())
+	checkSingleEventResult(t, "[2] rename folder", Event{FromPath: connector.NewFSPath(folder), ToPath: connector.NewFSPath(folder1), Type: Rename}, handler.Process())
 	_ = os.Remove(folder1)
 
 	// rename file; mv /tmp/test.txt /tmp/fs-shadow/test1.txt
@@ -109,7 +110,7 @@ func Test_SingleEvents(t *testing.T) {
 	_ = emptyFile.Close()
 	handler.Append(fsnotify.Event{Name: file, Op: fsnotify.Rename}, "")
 	handler.Append(fsnotify.Event{Name: file1, Op: fsnotify.Create}, "")
-	checkSingleEventResult(t, "[3] rename file", Event{FromPath: file, ToPath: file1, Type: Rename}, handler.Process())
+	checkSingleEventResult(t, "[3] rename file", Event{FromPath: connector.NewFSPath(file), ToPath: connector.NewFSPath(file1), Type: Rename}, handler.Process())
 	_ = os.Remove(file1)
 
 	// remove test process folder
@@ -119,25 +120,25 @@ func Test_SingleEvents(t *testing.T) {
 func Test_EventQueue(t *testing.T) {
 	handler := newEventHandler()
 	testFolder := "/tmp/fs-shadow"
-	folder := filepath.Join(testFolder, "test")
-	folder1 := filepath.Join(testFolder, "test1")
+	folder := connector.NewFSPath(filepath.Join(testFolder, "test"))
+	folder1 := connector.NewFSPath(filepath.Join(testFolder, "test1"))
 
 	// create test process folder
 	_ = os.Mkdir(testFolder, os.ModePerm)
 
 	// mkdir /tmp/fs-shadow/test
-	_ = os.Mkdir(folder, os.ModePerm)
-	handler.Append(fsnotify.Event{Name: folder, Op: fsnotify.Create}, "1")
+	_ = os.Mkdir(folder.String(), os.ModePerm)
+	handler.Append(fsnotify.Event{Name: folder.String(), Op: fsnotify.Create}, "1")
 
 	// mv /tmp/fs-shadow/test /tmp/test
 	//_ = os.Remove(folder)
-	_ = os.Mkdir(folder1, os.ModePerm)
-	handler.Append(fsnotify.Event{Name: folder, Op: fsnotify.Rename}, "2")
+	_ = os.Mkdir(folder1.String(), os.ModePerm)
+	handler.Append(fsnotify.Event{Name: folder.String(), Op: fsnotify.Rename}, "2")
 
 	// mv /tmp/fs-shadow/test .
 	//_ = os.Remove(folder1)
-	_ = os.Mkdir(folder, os.ModePerm)
-	handler.Append(fsnotify.Event{Name: folder, Op: fsnotify.Create}, "3")
+	_ = os.Mkdir(folder.String(), os.ModePerm)
+	handler.Append(fsnotify.Event{Name: folder.String(), Op: fsnotify.Create}, "3")
 
 	var results []Event
 	for {
@@ -146,6 +147,7 @@ func Test_EventQueue(t *testing.T) {
 			break
 		}
 		results = append(results, r...)
+		fmt.Println("x")
 	}
 	expectResult := []Event{
 		{FromPath: folder, Type: Create},
@@ -157,7 +159,7 @@ func Test_EventQueue(t *testing.T) {
 	}
 	for i, expectValue := range expectResult {
 		resultValue := results[i]
-		if expectValue != resultValue {
+		if expectValue.String() != resultValue.String() {
 			message := fmt.Sprintf("exceptType:%s resultType:%s", expectValue.Type, resultValue.Type)
 			t.Fatalf(message)
 		}

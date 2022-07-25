@@ -9,16 +9,8 @@ type MetaData struct {
 	IsDir      bool   `json:"is_dir"`
 	Sum        string `json:"sum"`
 	Size       int64  `json:"size"`
-	CreatedAt  int64  `json:"createdAt"`
+	CreatedAt  int64  `json:"created_at"`
 	Permission string `json:"permission"`
-}
-
-type FileNode struct {
-	Subs       []*FileNode `json:"subs"`
-	Name       string      `json:"name"`
-	UUID       string      `json:"uuid"`
-	ParentUUID string      `json:"parent_uuid"`
-	Meta       MetaData    `json:"-"`
 }
 
 type FileTree struct {

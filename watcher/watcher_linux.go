@@ -19,18 +19,27 @@ type TreeWatcher struct {
 	Path       connector.Path
 	ParentPath connector.Path
 
-	Events chan EventTransaction // bu channel'i servislere verecegiz. not implemented
+	Events chan EventTransaction
 	Errors chan error
 
 	sync.Mutex
 	EventManager event.EventHandler
 }
 
+func (tw *TreeWatcher) GetEvents() <-chan EventTransaction {
+	return tw.Events
+}
+
+func (tw *TreeWatcher) GetErrors() <-chan error {
+	return tw.Errors
+}
+
 func (tw *TreeWatcher) PrintTree(label string) {
-	bannerStartLine := fmt.Sprintf("----------------%s-----------------------", label)
-	bannerEndLine := fmt.Sprintf("----------------%s-----------------------\n\n", label)
+	bannerStartLine := fmt.Sprintf("----------------%s----------------", label)
+	bannerEndLine := fmt.Sprintf("----------------%s----------------\n\n", label)
 	fmt.Println(bannerStartLine)
-	a, _ := json.Marshal(tw.FileTree)
+	a, _ := json.MarshalIndent(tw.FileTree, "", "  ")
+	//a, _ := json.Marshal(tw.FileTree)
 	fmt.Println(string(a))
 	fmt.Println(bannerEndLine)
 }
@@ -80,8 +89,11 @@ func (tw *TreeWatcher) Create(path connector.Path, extra *filenode.ExtraPayload)
 			select {
 			case p := <-eventCh:
 				if p != nil {
+					fmt.Println(p.IsDir(), p.String())
 					if p.IsDir() {
 						err := tw.Watcher.Add(p.String())
+						fmt.Println("add", err)
+						fmt.Println(tw.Watcher.WatchList())
 						if err != nil {
 							fmt.Println("create error", err)
 							return
@@ -116,24 +128,37 @@ func (tw *TreeWatcher) Rename(fromPath connector.Path, toPath connector.Path) (*
 	return node, err
 }
 
-func (tw *TreeWatcher) Handler(e event.Event, extra *filenode.ExtraPayload) (*EventTransaction, error) {
+// Handler the 'extras' parameter is optional because we may need to move an external value to the node layer.
+// sample; We want to parameterize the uuid from outside in VFS, but we don't want to do that in FS.
+func (tw *TreeWatcher) Handler(e event.Event, extras ...*filenode.ExtraPayload) (*EventTransaction, error) {
 	tw.Lock()
+	defer tw.Unlock()
+
 	var err error
 	var node *filenode.FileNode
-	defer tw.Unlock()
+	var extra *filenode.ExtraPayload
+
+	if len(extras) > 0 {
+		extra = extras[0]
+	}
 
 	switch e.Type {
 	case event.Remove:
 		node, err = tw.Remove(e.FromPath)
+		break
 	case event.Write:
 		node, err = tw.Write(e.FromPath)
+		break
 	case event.Create:
 		node, err = tw.Create(e.FromPath, extra)
+		break
 	case event.Rename:
 		node, err = tw.Rename(e.FromPath, e.ToPath)
+		break
 	default:
 		errorMsg := fmt.Sprintf("unhandled event: op:%s, path:%s", e.Type, e.FromPath)
 		err = errors.New(errorMsg)
+		break
 	}
 	if err != nil {
 		return nil, err
@@ -161,13 +186,14 @@ func (tw *TreeWatcher) Watch() {
 			if !ok {
 				return
 			}
-			fmt.Println("error:", err)
+			tw.Errors <- err
 		}
 	}
 }
 
 func (tw *TreeWatcher) Start() {
-	fmt.Println("started!")
+	log.Debug("started!")
+	// EventManager's working range
 	ticker := time.NewTicker(2 * time.Second)
 	go func() {
 		for {
@@ -176,11 +202,13 @@ func (tw *TreeWatcher) Start() {
 				if tw.EventManager.StackLength() > 0 {
 					newEvents := tw.EventManager.Process()
 					for _, e := range newEvents {
-						_, err := tw.Handler(e, nil)
+						txn, err := tw.Handler(e)
 						if err != nil {
-							// event channel update
 							fmt.Println(err)
+							fmt.Println(tw.Watcher.WatchList())
+							tw.Errors <- err
 						}
+						tw.Events <- *txn
 					}
 				}
 			}
@@ -224,10 +252,12 @@ func NewPathWatcher(fsPath string) (*TreeWatcher, *EventTransaction, error) {
 		Errors:       make(chan error),
 	}
 	e := event.Event{FromPath: path, Type: event.Create}
-	txn, err := tw.Handler(e, nil)
+	txn, err := tw.Handler(e)
+	tw.Errors <- err
 	if err != nil {
 		return nil, nil, err
 	}
 	tw.Start()
+	tw.Events <- *txn
 	return &tw, txn, nil
 }

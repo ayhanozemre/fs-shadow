@@ -12,13 +12,13 @@ import (
 
 func Test_VirtualWatcherUseCase(t *testing.T) {
 	root := "fs-shadow"
-	tw, _, err := NewVirtualPathWatcher(root, &filenode.ExtraPayload{UUID: uuid.New().String()})
+	tw, _, err := NewVirtualPathWatcher(root, &filenode.ExtraPayload{UUID: uuid.NewString()})
 	assert.Equal(t, nil, err, "watcher creation error")
 
 	newPath := connector.NewVirtualPath(filepath.Join(root, "test-1"), true)
 	// Create
 	e := event.Event{FromPath: newPath, Type: event.Create}
-	_, err = tw.Handler(e, &filenode.ExtraPayload{UUID: uuid.New().String()})
+	_, err = tw.Handler(e, &filenode.ExtraPayload{UUID: uuid.NewString()})
 	assert.Equal(t, nil, err, "folder creation error")
 	assert.Equal(t, newPath.Name(), tw.FileTree.Subs[0].Name, "create:invalid file name")
 
@@ -46,7 +46,7 @@ func Test_VirtualWatcherFunctionality(t *testing.T) {
 
 	root := filenode.FileNode{
 		Name: path.Name(),
-		UUID: uuid.New().String(),
+		UUID: uuid.NewString(),
 		Meta: filenode.MetaData{
 			IsDir: true,
 		},
@@ -58,18 +58,18 @@ func Test_VirtualWatcherFunctionality(t *testing.T) {
 		Path:       path,
 	}
 
-	_, err = tw.Create(path, &filenode.ExtraPayload{UUID: uuid.New().String()})
+	_, err = tw.Create(path, &filenode.ExtraPayload{UUID: uuid.NewString()})
 	assert.Equal(t, nil, err, "root node creation error")
 
 	// Create folder
 	newFolder := connector.NewVirtualPath(filepath.Join(testRoot, "folder"), true)
-	_, err = tw.Create(newFolder, &filenode.ExtraPayload{UUID: uuid.New().String()})
+	_, err = tw.Create(newFolder, &filenode.ExtraPayload{UUID: uuid.NewString()})
 	assert.Equal(t, nil, err, "folder node creation error")
 	assert.Equal(t, newFolder.Name(), tw.FileTree.Subs[0].Name, "create:invalid folder name")
 
 	// Create file
 	newFile := connector.NewVirtualPath(filepath.Join(testRoot, "file.txt"), false)
-	_, err = tw.Create(newFile, &filenode.ExtraPayload{UUID: uuid.New().String()})
+	_, err = tw.Create(newFile, &filenode.ExtraPayload{UUID: uuid.NewString()})
 	assert.Equal(t, nil, err, "file node creation error")
 	assert.Equal(t, newFile.Name(), tw.FileTree.Subs[1].Name, "create:invalid file name")
 
@@ -91,7 +91,7 @@ func Test_VirtualWatcherFunctionality(t *testing.T) {
 
 func Test_Restore(t *testing.T) {
 	root := "fs-shadow"
-	tw, _, err := NewVirtualPathWatcher(root, &filenode.ExtraPayload{UUID: uuid.New().String()})
+	tw, _, err := NewVirtualPathWatcher(root, &filenode.ExtraPayload{UUID: uuid.NewString()})
 	assert.Equal(t, nil, err, "watcher creation error")
 	tw.Restore(&filenode.FileNode{Name: "new-tree"})
 	assert.Equal(t, "new-tree", tw.FileTree.Name, "tree updated error")

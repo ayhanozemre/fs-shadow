@@ -21,27 +21,27 @@ func NewEventHandler() EventHandler {
 	return newEventHandler()
 }
 
-type EventType string
+type Type string
 
-func (e EventType) String() string {
+func (e Type) String() string {
 	return string(e)
 }
 
 const (
-	Remove EventType = "remove"
-	Write  EventType = "write"
-	Create EventType = "create"
-	Rename EventType = "rename"
+	Remove Type = "remove"
+	Write  Type = "write"
+	Create Type = "create"
+	Rename Type = "rename"
 )
 
 type Event struct {
-	Type     EventType
+	Type     Type
 	FromPath connector.Path
 	ToPath   connector.Path
 }
 
 func (e Event) String() string {
-	s := fmt.Sprintf("rsult %s", e.FromPath.String())
+	s := fmt.Sprintf("event %s", e.FromPath.String())
 	if e.Type == Rename {
 		s += fmt.Sprintf(" -> %s", e.ToPath.String())
 	}

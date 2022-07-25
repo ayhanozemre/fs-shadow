@@ -8,11 +8,13 @@ import (
 )
 
 type Watcher interface {
-	PrintTree(label string) // sil beni!
+	PrintTree(label string) // for debug
 	Start()
 	Watch()
 	Close()
-	Handler(event event.Event, extra *filenode.ExtraPayload) (*EventTransaction, error)
+	GetEvents() <-chan EventTransaction
+	GetErrors() <-chan error
+	Handler(event event.Event, extra ...*filenode.ExtraPayload) (*EventTransaction, error)
 	Create(fromPath connector.Path, extra *filenode.ExtraPayload) (*filenode.FileNode, error)
 	Write(fromPath connector.Path) (*filenode.FileNode, error)
 	Rename(fromPath connector.Path, toPath connector.Path) (*filenode.FileNode, error)
@@ -22,13 +24,13 @@ type Watcher interface {
 
 type EventTransaction struct {
 	Name       string
-	Type       event.EventType
+	Type       event.Type
 	UUID       string
 	ParentUUID string
 	Meta       filenode.MetaData
 }
 
-func (t EventTransaction) compress() ([]byte, error) {
+func (t EventTransaction) Encode() ([]byte, error) {
 	b, err := msgpack.Marshal(t)
 	if err != nil {
 		return nil, err
@@ -36,7 +38,7 @@ func (t EventTransaction) compress() ([]byte, error) {
 	return b, err
 }
 
-func (t *EventTransaction) decompress(b []byte) error {
+func (t *EventTransaction) Decode(b []byte) error {
 	err := msgpack.Unmarshal(b, t)
 	if err != nil {
 		return err
@@ -53,7 +55,7 @@ func (t *EventTransaction) toFileNode() *filenode.FileNode {
 	}
 }
 
-func makeEventTransaction(node filenode.FileNode, event event.EventType) *EventTransaction {
+func makeEventTransaction(node filenode.FileNode, event event.Type) *EventTransaction {
 	return &EventTransaction{
 		Type:       event,
 		Name:       node.Name,

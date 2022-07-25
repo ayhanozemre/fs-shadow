@@ -22,7 +22,7 @@ func generateTransactionBytes() [][]byte {
 	// events to byte arrays
 	var tbl [][]byte
 	for i := 0; i < len(ets); i++ {
-		b, _ := ets[i].compress()
+		b, _ := ets[i].Encode()
 		tbl = append(tbl, b)
 	}
 	return tbl
@@ -39,7 +39,7 @@ func Test_CreateFileNodeWithTransaction(t *testing.T) {
 
 func Test_RestoreWatcherWithTransactions(t *testing.T) {
 	root := "fs-shadow"
-	tw, _, err := NewVirtualPathWatcher(root, &filenode.ExtraPayload{UUID: uuid.New().String()})
+	tw, _, err := NewVirtualPathWatcher(root, &filenode.ExtraPayload{UUID: uuid.NewString()})
 	assert.Equal(t, nil, err, "watcher creation error")
 
 	tbl := generateTransactionBytes()

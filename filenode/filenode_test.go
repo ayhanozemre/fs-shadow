@@ -185,7 +185,7 @@ func Test_SearchByUUID(t *testing.T) {
 	tree := makeDummyTree()
 	nodeUUID := tree.Subs[0].UUID
 	node := tree.SearchByUUID(nodeUUID)
-	assert.Equal(t, nodeUUID, node.UUID, "invalid node")
+	assert.Equal(t, nodeUUID, node.UUID, "node not found")
 }
 
 func Test_RemoveCore(t *testing.T) {

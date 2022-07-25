@@ -1,4 +1,4 @@
-package main
+package example
 
 import (
 	"github.com/ayhanozemre/fs-shadow/watcher"
@@ -7,11 +7,22 @@ import (
 
 func main() {
 	log.SetLevel(log.DebugLevel)
-	//tw, err := watcher.NewVirtualPathWatcher("/home/wade/Desktop/TransferChain")
+	//tw, _, err := watcher.NewFSWatcher("/tmp/root")
 	tw, _, err := watcher.NewFSWatcher("/home/wade/Desktop/TransferChain")
 
 	if err == nil {
 		tw.PrintTree("INIT TREE")
+
+		go func() {
+			ch := tw.GetEvents()
+			for {
+				select {
+				case p := <-ch:
+					log.Debug(p.UUID)
+				}
+			}
+		}()
+
 		done := make(chan bool)
 		<-done
 	} else {

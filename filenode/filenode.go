@@ -13,6 +13,14 @@ import (
 	"sync"
 )
 
+type FileNode struct {
+	Subs       []*FileNode `json:"subs"`
+	Name       string      `json:"name"`
+	UUID       string      `json:"uuid"`
+	ParentUUID string      `json:"parent_uuid"`
+	Meta       MetaData    `json:"-"`
+}
+
 func (fn *FileNode) Rename(fromPath connector.Path, toPath connector.Path) (*FileNode, error) {
 	node := fn.Search(fromPath.String())
 	if node == nil {
@@ -28,6 +36,9 @@ func (fn *FileNode) Remove(fromPath connector.Path) (deletedNode *FileNode, err 
 	return fn._remove(parentNode, fileName)
 }
 
+// RemoveByUUID sdlkfjsdlkjf
+// sdfklsjdlkfjs
+// sdlkfslkdjf
 func (fn *FileNode) RemoveByUUID(uuid string, parentUUID string) (*FileNode, error) {
 	parentNode := fn.SearchByUUID(parentUUID)
 	return fn._remove(parentNode, uuid, "uuid")
@@ -95,7 +106,7 @@ func (fn *FileNode) Create(fromPath connector.Path, absolutePath connector.Path,
 
 	var _uuid string
 	if !fromPath.IsVirtual() {
-		_uuid = uuid.New().String()
+		_uuid = uuid.NewString()
 	}
 	absolutePathInfo := absolutePath.Info()
 	meta := MetaData{
@@ -169,7 +180,10 @@ func (fn *FileNode) SearchByUUID(uuid string) *FileNode {
 	for _, sn := range fn.Subs {
 		wg.Add(1)
 		go func(sn *FileNode) {
-			wantedNode = sn.SearchByUUID(uuid)
+			node := sn.SearchByUUID(uuid)
+			if node != nil {
+				wantedNode = node
+			}
 			wg.Done()
 		}(sn)
 	}
@@ -191,7 +205,7 @@ func WalkOnFsPath(root *FileNode, absolutePath connector.Path, wg *sync.WaitGrou
 
 		newNode := FileNode{
 			Name: path.Name(),
-			UUID: uuid.New().String(),
+			UUID: uuid.NewString(),
 			Meta: MetaData{
 				IsDir:      path.IsDir(),
 				Sum:        sum,
