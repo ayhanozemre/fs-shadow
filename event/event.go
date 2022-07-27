@@ -32,6 +32,7 @@ const (
 	Write  Type = "write"
 	Create Type = "create"
 	Rename Type = "rename"
+	Move   Type = "move"
 )
 
 type Event struct {

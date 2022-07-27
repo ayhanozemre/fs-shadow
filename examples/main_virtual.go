@@ -1,4 +1,4 @@
-package example
+package main
 
 import (
 	"bufio"
@@ -22,11 +22,13 @@ func textToEventType(text string) (event.Type, error) {
 		return event.Remove, nil
 	case "rename":
 		return event.Rename, nil
+	case "move":
+		return event.Move, nil
 	}
 	return "", errors.New("invalid event type")
 }
 
-func mainVirtual() {
+func main() {
 	var err error
 	var tw watcher.Watcher
 	log.SetLevel(log.DebugLevel)
@@ -36,7 +38,7 @@ func mainVirtual() {
 	if err == nil {
 		tw.PrintTree("INIT TREE")
 		fmt.Println("First Node name is 'root'")
-		fmt.Println("Examples:\n create /root/sub\n rename /root/sub /root/test\n remove /root/test")
+		fmt.Println("Examples:\n create /root/sub\n rename /root/sub /root/test\n move /root/sub /root/test\n remove /root/test")
 		fmt.Println("Press Q/q to quit the loop")
 
 		scanner := bufio.NewScanner(os.Stdin)

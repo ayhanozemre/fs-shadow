@@ -18,7 +18,21 @@ type FileNode struct {
 	Name       string      `json:"name"`
 	UUID       string      `json:"uuid"`
 	ParentUUID string      `json:"parent_uuid"`
-	Meta       MetaData    `json:"-"`
+	Meta       MetaData    `json:"meta"`
+}
+
+func (fn *FileNode) Move(fromPath connector.Path, toPath connector.Path) (*FileNode, error) {
+	// /home/test/folder1/folder2 ->  /home/test = /home/test/folder2
+	toNode := fn.Search(toPath.String())
+	if toNode == nil {
+		return nil, errors.New("to FileNode not found")
+	}
+	node, err := fn.Remove(fromPath)
+	if err != nil {
+		return nil, err
+	}
+	toNode.Subs = append(toNode.Subs, node)
+	return node, nil
 }
 
 func (fn *FileNode) Rename(fromPath connector.Path, toPath connector.Path) (*FileNode, error) {
@@ -36,9 +50,6 @@ func (fn *FileNode) Remove(fromPath connector.Path) (deletedNode *FileNode, err 
 	return fn._remove(parentNode, fileName)
 }
 
-// RemoveByUUID sdlkfjsdlkjf
-// sdfklsjdlkfjs
-// sdlkfslkdjf
 func (fn *FileNode) RemoveByUUID(uuid string, parentUUID string) (*FileNode, error) {
 	parentNode := fn.SearchByUUID(parentUUID)
 	return fn._remove(parentNode, uuid, "uuid")

@@ -60,6 +60,14 @@ func (tw *VirtualTree) Rename(fromPath connector.Path, toPath connector.Path) (*
 	return node, nil
 }
 
+func (tw *VirtualTree) Move(fromPath connector.Path, toPath connector.Path) (*filenode.FileNode, error) {
+	node, err := tw.FileTree.Move(fromPath.ExcludePath(tw.ParentPath), toPath.ExcludePath(tw.ParentPath))
+	if err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
 func (tw *VirtualTree) Write(path connector.Path) (*filenode.FileNode, error) {
 	return nil, nil
 }
@@ -99,6 +107,9 @@ func (tw *VirtualTree) Handler(e event.Event, extras ...*filenode.ExtraPayload) 
 		break
 	case event.Rename:
 		node, err = tw.Rename(e.FromPath, e.ToPath)
+		break
+	case event.Move:
+		node, err = tw.Move(e.FromPath, e.ToPath)
 		break
 	default:
 		errorMsg := fmt.Sprintf("unhandled event: %s", e.String())

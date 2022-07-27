@@ -18,6 +18,7 @@ type Watcher interface {
 	Create(fromPath connector.Path, extra *filenode.ExtraPayload) (*filenode.FileNode, error)
 	Write(fromPath connector.Path) (*filenode.FileNode, error)
 	Rename(fromPath connector.Path, toPath connector.Path) (*filenode.FileNode, error)
+	Move(fromPath connector.Path, toPath connector.Path) (*filenode.FileNode, error)
 	Remove(fromPath connector.Path) (*filenode.FileNode, error)
 	Restore(tree *filenode.FileNode)
 }

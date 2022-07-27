@@ -128,6 +128,14 @@ func (tw *TreeWatcher) Rename(fromPath connector.Path, toPath connector.Path) (*
 	return node, err
 }
 
+func (tw *TreeWatcher) Move(fromPath connector.Path, toPath connector.Path) (*filenode.FileNode, error) {
+	node, err := tw.FileTree.Move(fromPath.ExcludePath(tw.ParentPath), toPath.ExcludePath(tw.ParentPath))
+	if err != nil {
+		return nil, err
+	}
+	return node, err
+}
+
 // Handler the 'extras' parameter is optional because we may need to move an external value to the node layer.
 // sample; We want to parameterize the uuid from outside in VFS, but we don't want to do that in FS.
 func (tw *TreeWatcher) Handler(e event.Event, extras ...*filenode.ExtraPayload) (*EventTransaction, error) {
@@ -154,6 +162,9 @@ func (tw *TreeWatcher) Handler(e event.Event, extras ...*filenode.ExtraPayload) 
 		break
 	case event.Rename:
 		node, err = tw.Rename(e.FromPath, e.ToPath)
+		break
+	case event.Move:
+		node, err = tw.Move(e.FromPath, e.ToPath)
 		break
 	default:
 		errorMsg := fmt.Sprintf("unhandled event: op:%s, path:%s", e.Type, e.FromPath)

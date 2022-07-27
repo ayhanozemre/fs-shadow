@@ -1,4 +1,4 @@
-package example
+package main
 
 import (
 	"github.com/ayhanozemre/fs-shadow/watcher"
@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+	// not completed
 	log.SetLevel(log.DebugLevel)
 	tw, _, err := watcher.NewFSWatcher("/tmp/root")
 

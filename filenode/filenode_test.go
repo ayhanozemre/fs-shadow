@@ -188,6 +188,16 @@ func Test_SearchByUUID(t *testing.T) {
 	assert.Equal(t, nodeUUID, node.UUID, "node not found")
 }
 
+func TestMove(t *testing.T) {
+	tree := makeDummyTree()
+	fromPath := connector.NewVirtualPath("alphabet/d", true)
+	toPath := connector.NewVirtualPath("alphabet/a", true)
+	_, err := tree.Move(fromPath, toPath)
+	node := tree.Search("alphabet/a")
+	assert.Equal(t, nil, err, "move process error")
+	assert.Equal(t, 1, len(node.Subs), "move process error")
+}
+
 func Test_RemoveCore(t *testing.T) {
 	tree := makeDummyTree()
 	treeSubLength := len(tree.Subs)

@@ -83,6 +83,11 @@ func Test_VirtualWatcherFunctionality(t *testing.T) {
 	_, err = tw.Write(renameFilePath)
 	assert.Equal(t, nil, err, "file node write error")
 
+	// Move
+	_, err = tw.Move(renameFilePath, newFolder)
+	assert.Equal(t, nil, err, "file node move error")
+	assert.Equal(t, 1, len(root.Subs), "file node move error")
+
 	// Remove
 	_, err = tw.Remove(renameFilePath)
 	assert.Equal(t, nil, err, "file node remove error")
