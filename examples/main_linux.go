@@ -28,6 +28,6 @@ func main() {
 	} else {
 		log.Panic(err)
 	}
-	tw.Close()
+	tw.Stop()
 
 }

@@ -102,3 +102,14 @@ func Test_Restore(t *testing.T) {
 	assert.Equal(t, "new-tree", tw.FileTree.Name, "tree updated error")
 
 }
+
+func TestVirtualTree_SearchByPath(t *testing.T) {
+	root := "fs-shadow"
+	tw, _, _ := NewVirtualPathWatcher(root, &filenode.ExtraPayload{UUID: uuid.NewString()})
+	newPath := connector.NewVirtualPath(filepath.Join(root, "test-1"), true)
+	e := event.Event{FromPath: newPath, Type: event.Create}
+	_, _ = tw.Handler(e, &filenode.ExtraPayload{UUID: uuid.NewString()})
+	node := tw.SearchByPath("fs-shadow/test-1")
+	assert.NotNil(t, node, "search by name error")
+
+}

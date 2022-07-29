@@ -15,7 +15,6 @@ import (
 func Test_LinuxWatcherUseCase(t *testing.T) {
 	testRoot := "/tmp/fs-shadow"
 	_ = os.Mkdir(testRoot, os.ModePerm)
-
 	tw, _, err := NewPathWatcher(testRoot)
 	assert.Equal(t, nil, err, "linux patch watcher creation error")
 
@@ -39,7 +38,7 @@ func Test_LinuxWatcherUseCase(t *testing.T) {
 	time.Sleep(3 * time.Second)
 	assert.Equal(t, 0, len(tw.FileTree.Subs), "remove:invalid subs length")
 
-	tw.Close()
+	tw.Stop()
 	_ = os.RemoveAll(testRoot)
 	_ = os.Remove(moveDirectory)
 

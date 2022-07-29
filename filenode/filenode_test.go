@@ -199,6 +199,7 @@ func TestMove(t *testing.T) {
 }
 
 func Test_RemoveCore(t *testing.T) {
+	// _remove
 	tree := makeDummyTree()
 	treeSubLength := len(tree.Subs)
 

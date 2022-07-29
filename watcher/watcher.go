@@ -8,19 +8,20 @@ import (
 )
 
 type Watcher interface {
-	PrintTree(label string) // for debug
+	Stop()
 	Start()
 	Watch()
-	Close()
-	GetEvents() <-chan EventTransaction
+	PrintTree(label string) // for debug
 	GetErrors() <-chan error
+	GetEvents() <-chan EventTransaction
+	Restore(tree *filenode.FileNode)
+	SearchByPath(path string) *filenode.FileNode
 	Handler(event event.Event, extra ...*filenode.ExtraPayload) (*EventTransaction, error)
 	Create(fromPath connector.Path, extra *filenode.ExtraPayload) (*filenode.FileNode, error)
 	Write(fromPath connector.Path) (*filenode.FileNode, error)
-	Rename(fromPath connector.Path, toPath connector.Path) (*filenode.FileNode, error)
-	Move(fromPath connector.Path, toPath connector.Path) (*filenode.FileNode, error)
 	Remove(fromPath connector.Path) (*filenode.FileNode, error)
-	Restore(tree *filenode.FileNode)
+	Move(fromPath connector.Path, toPath connector.Path) (*filenode.FileNode, error)
+	Rename(fromPath connector.Path, toPath connector.Path) (*filenode.FileNode, error)
 }
 
 type EventTransaction struct {

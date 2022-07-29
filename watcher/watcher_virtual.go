@@ -27,6 +27,10 @@ func (tw *VirtualTree) GetErrors() <-chan error {
 	return nil
 }
 
+func (tw *VirtualTree) SearchByPath(path string) *filenode.FileNode {
+	return tw.FileTree.Search(path)
+}
+
 func (tw *VirtualTree) PrintTree(label string) {
 	bannerStartLine := fmt.Sprintf("----------------%s----------------", label)
 	bannerEndLine := fmt.Sprintf("----------------%s----------------\n\n", label)
@@ -72,7 +76,7 @@ func (tw *VirtualTree) Write(path connector.Path) (*filenode.FileNode, error) {
 	return nil, nil
 }
 
-func (tw *VirtualTree) Close() {
+func (tw *VirtualTree) Stop() {
 	log.Debug("close not implemented ")
 }
 

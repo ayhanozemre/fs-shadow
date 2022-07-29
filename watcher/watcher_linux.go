@@ -34,7 +34,12 @@ func (tw *TreeWatcher) GetErrors() <-chan error {
 	return tw.Errors
 }
 
+func (tw *TreeWatcher) SearchByPath(path string) *filenode.FileNode {
+	return tw.FileTree.Search(path)
+}
+
 func (tw *TreeWatcher) PrintTree(label string) {
+
 	bannerStartLine := fmt.Sprintf("----------------%s----------------", label)
 	bannerEndLine := fmt.Sprintf("----------------%s----------------\n\n", label)
 	fmt.Println(bannerStartLine)
@@ -42,15 +47,6 @@ func (tw *TreeWatcher) PrintTree(label string) {
 	//a, _ := json.Marshal(tw.FileTree)
 	fmt.Println(string(a))
 	fmt.Println(bannerEndLine)
-}
-
-func (tw *TreeWatcher) Close() {
-	err := tw.Watcher.Close()
-	if err != nil {
-		log.Error(err)
-	}
-	close(tw.Events)
-	close(tw.Errors)
 }
 
 func (tw *TreeWatcher) Remove(path connector.Path) (*filenode.FileNode, error) {
@@ -89,11 +85,8 @@ func (tw *TreeWatcher) Create(path connector.Path, extra *filenode.ExtraPayload)
 			select {
 			case p := <-eventCh:
 				if p != nil {
-					fmt.Println(p.IsDir(), p.String())
 					if p.IsDir() {
 						err := tw.Watcher.Add(p.String())
-						fmt.Println("add", err)
-						fmt.Println(tw.Watcher.WatchList())
 						if err != nil {
 							fmt.Println("create error", err)
 							return
@@ -228,6 +221,15 @@ func (tw *TreeWatcher) Start() {
 	go tw.Watch()
 }
 
+func (tw *TreeWatcher) Stop() {
+	err := tw.Watcher.Close()
+	if err != nil {
+		log.Error(err)
+	}
+	close(tw.Events)
+	close(tw.Errors)
+}
+
 func (tw *TreeWatcher) Restore(tree *filenode.FileNode) {
 	tw.FileTree = tree
 }
@@ -264,8 +266,8 @@ func NewPathWatcher(fsPath string) (*TreeWatcher, *EventTransaction, error) {
 	}
 	e := event.Event{FromPath: path, Type: event.Create}
 	txn, err := tw.Handler(e)
-	tw.Errors <- err
 	if err != nil {
+		tw.Errors <- err
 		return nil, nil, err
 	}
 	tw.Start()
