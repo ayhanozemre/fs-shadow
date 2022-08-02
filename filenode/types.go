@@ -11,4 +11,5 @@ type MetaData struct {
 type ExtraPayload struct {
 	UUID         string
 	AbsolutePath string
+	IsDir        bool
 }
