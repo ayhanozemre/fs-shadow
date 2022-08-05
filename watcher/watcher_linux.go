@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ayhanozemre/fs-shadow/event"
-	"github.com/ayhanozemre/fs-shadow/filenode"
+	filenode "github.com/ayhanozemre/fs-shadow/filenode"
 	"github.com/ayhanozemre/fs-shadow/path"
 	"github.com/fsnotify/fsnotify"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"sync"
 	"time"
@@ -43,8 +44,8 @@ func (tw *TreeWatcher) PrintTree(label string) {
 	bannerStartLine := fmt.Sprintf("----------------%s----------------", label)
 	bannerEndLine := fmt.Sprintf("----------------%s----------------\n\n", label)
 	fmt.Println(bannerStartLine)
-	a, _ := json.MarshalIndent(tw.FileTree, "", "  ")
-	//a, _ := json.Marshal(tw.FileTree)
+	//a, _ := json.MarshalIndent(tw.FileTree, "", "  ")
+	a, _ := json.Marshal(tw.FileTree)
 	fmt.Println(string(a))
 	fmt.Println(bannerEndLine)
 }
@@ -52,12 +53,15 @@ func (tw *TreeWatcher) PrintTree(label string) {
 func (tw *TreeWatcher) Remove(path connector.Path) (*filenode.FileNode, error) {
 	eventPath := path.ExcludePath(tw.ParentPath)
 	node, err := tw.FileTree.Remove(eventPath)
-	if err == nil && node != nil && node.Meta.IsDir {
-		err = tw.Watcher.Remove(path.String())
-		if err != nil {
-			return nil, err
+	/*
+		TODO: this is no longer needed because fsnotify manages it itself.
+		if err == nil && node != nil && node.Meta.IsDir {
+			err = tw.Watcher.Remove(path.String())
+			if err != nil {
+				return nil, err
+			}
 		}
-	}
+	*/
 	return node, err
 }
 
@@ -67,7 +71,7 @@ func (tw *TreeWatcher) Write(path connector.Path) (*filenode.FileNode, error) {
 	if !path.IsDir() {
 		eventPath := path.ExcludePath(tw.ParentPath)
 		node, err = tw.FileTree.Update(eventPath, path)
-		return nil, err
+		return node, err
 	}
 	return node, err
 }
@@ -88,7 +92,7 @@ func (tw *TreeWatcher) Create(path connector.Path, extra *filenode.ExtraPayload)
 					if p.IsDir() {
 						err := tw.Watcher.Add(p.String())
 						if err != nil {
-							fmt.Println("create error", err)
+							tw.Errors <- err
 							return
 						}
 					}
@@ -187,10 +191,10 @@ func (tw *TreeWatcher) Watch() {
 			}
 			tw.EventManager.Append(e, sum)
 		case err, ok := <-tw.Watcher.Errors:
+			tw.Errors <- err
 			if !ok {
 				return
 			}
-			tw.Errors <- err
 		}
 	}
 }
@@ -208,8 +212,6 @@ func (tw *TreeWatcher) Start() {
 					for _, e := range newEvents {
 						txn, err := tw.Handler(e)
 						if err != nil {
-							fmt.Println(err)
-							fmt.Println(tw.Watcher.WatchList())
 							tw.Errors <- err
 						}
 						tw.Events <- *txn
@@ -250,9 +252,11 @@ func NewPathWatcher(fsPath string) (*TreeWatcher, *EventTransaction, error) {
 
 	root := filenode.FileNode{
 		Name: path.Name(),
+		UUID: uuid.NewString(),
 		Meta: filenode.MetaData{
 			IsDir: true,
 		},
+		Subs: []*filenode.FileNode{},
 	}
 
 	tw := TreeWatcher{
@@ -261,8 +265,8 @@ func NewPathWatcher(fsPath string) (*TreeWatcher, *EventTransaction, error) {
 		Path:         path,
 		Watcher:      watcher,
 		EventManager: event.NewEventHandler(),
-		Events:       make(chan EventTransaction),
-		Errors:       make(chan error),
+		Events:       make(chan EventTransaction, 10),
+		Errors:       make(chan error, 10),
 	}
 	e := event.Event{FromPath: path, Type: event.Create}
 	txn, err := tw.Handler(e)

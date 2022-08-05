@@ -151,5 +151,4 @@ func Test_LinuxWatcherFunctionality(t *testing.T) {
 	assert.Equal(t, len(tw.FileTree.Subs), 1, "handler: root subs length error")
 
 	_ = os.RemoveAll(testRoot)
-
 }

@@ -16,9 +16,9 @@ import (
 type FileNode struct {
 	Subs       []*FileNode `json:"subs"`
 	Name       string      `json:"name"`
-	UUID       string      `json:"uuid"`
-	ParentUUID string      `json:"parent_uuid"`
-	Meta       MetaData    `json:"meta"`
+	UUID       string      `json:"-"`
+	ParentUUID string      `json:"-"`
+	Meta       MetaData    `json:"-"`
 }
 
 func (fn *FileNode) Move(fromPath connector.Path, toPath connector.Path) (*FileNode, error) {
@@ -60,7 +60,7 @@ func (fn *FileNode) _remove(parentNode *FileNode, uniq string, searchField ...st
 		return nil, errors.New("FileNode not found")
 	}
 	if len(parentNode.Subs) == 0 {
-		return nil, errors.New("Subs nodes not found")
+		return nil, errors.New("subs nodes not found")
 	}
 	for nodeIndex, sub := range parentNode.Subs {
 		var lookupValue string
@@ -133,6 +133,7 @@ func (fn *FileNode) Create(fromPath connector.Path, absolutePath connector.Path,
 		UUID:       _uuid,
 		ParentUUID: parentNode.UUID,
 		Meta:       meta,
+		Subs:       []*FileNode{},
 	}
 	parentNode.Subs = append(parentNode.Subs, &node)
 	if absolutePath.IsDir() && !absolutePath.IsVirtual() {
@@ -216,8 +217,10 @@ func WalkOnFsPath(root *FileNode, absolutePath connector.Path, wg *sync.WaitGrou
 		}
 
 		newNode := FileNode{
-			Name: path.Name(),
-			UUID: uuid.NewString(),
+			Name:       path.Name(),
+			UUID:       uuid.NewString(),
+			ParentUUID: root.UUID,
+			Subs:       []*FileNode{},
 			Meta: MetaData{
 				IsDir:      path.IsDir(),
 				Sum:        sum,

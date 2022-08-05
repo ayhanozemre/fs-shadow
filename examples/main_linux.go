@@ -2,24 +2,28 @@ package main
 
 import (
 	"github.com/ayhanozemre/fs-shadow/watcher"
+	"github.com/davecgh/go-spew/spew"
 	log "github.com/sirupsen/logrus"
 )
 
 func main() {
 	// not completed
 	log.SetLevel(log.DebugLevel)
-	tw, _, err := watcher.NewFSWatcher("/tmp/root")
+	tw, _, err := watcher.NewFSWatcher("/tmp/fs-shadow")
 
 	if err == nil {
-		tw.PrintTree("INIT TREE")
 
 		go func() {
 			ch := tw.GetEvents()
+			err := tw.GetErrors()
 			for {
 				select {
 				case p := <-ch:
-					log.Debug(p.UUID)
+					log.Debug(spew.Sprintf("Event-> Name:%s UUID:%s", p.Name, p.UUID))
+				case e := <-err:
+					log.Debug("Error->", e)
 				}
+				// tw.PrintTree("TREE")
 			}
 		}()
 
