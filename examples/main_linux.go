@@ -1,13 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"github.com/ayhanozemre/fs-shadow/watcher"
-	"github.com/davecgh/go-spew/spew"
 	log "github.com/sirupsen/logrus"
 )
 
 func main() {
+
 	// not completed
+
 	log.SetLevel(log.DebugLevel)
 	tw, _, err := watcher.NewFSWatcher("/tmp/fs-shadow")
 
@@ -19,7 +21,7 @@ func main() {
 			for {
 				select {
 				case p := <-ch:
-					log.Debug(spew.Sprintf("Event-> Name:%s UUID:%s", p.Name, p.UUID))
+					log.Debug(fmt.Sprintf("Event-> Name:%s UUID:%s", p.Name, p.UUID))
 				case e := <-err:
 					log.Debug("Error->", e)
 				}
