@@ -54,7 +54,6 @@ func (tw *TreeWatcher) Remove(path connector.Path) (*filenode.FileNode, error) {
 	eventPath := path.ExcludePath(tw.ParentPath)
 	node, err := tw.FileTree.Remove(eventPath)
 	/*
-		TODO: this is no longer needed because fsnotify manages it itself.
 		if err == nil && node != nil && node.Meta.IsDir {
 			err = tw.Watcher.Remove(path.String())
 			if err != nil {

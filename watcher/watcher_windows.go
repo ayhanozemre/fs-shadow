@@ -1,6 +1,7 @@
 package watcher
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,6 +22,9 @@ type TreeWatcher struct {
 
 	Events chan EventTransaction
 	Errors chan error
+
+	IgniterReloadFunc func()
+	IgniterReloadCtx  context.Context
 
 	sync.Mutex
 	EventManager event.EventHandler
@@ -62,12 +66,15 @@ func (tw *TreeWatcher) Close() {
 func (tw *TreeWatcher) Remove(path connector.Path) (*filenode.FileNode, error) {
 	eventPath := path.ExcludePath(tw.ParentPath)
 	node, err := tw.FileTree.Remove(eventPath)
-	if err == nil && node != nil && node.Meta.IsDir {
-		err = tw.Watcher.Remove(path.String())
-		if err != nil {
-			return nil, err
-		}
+	if err != nil {
+		return nil, err
 	}
+
+	err = tw.removeWatcherPath(path.String())
+	if err != nil {
+		return nil, errors.New("path not deleted in watchlist")
+	}
+
 	return node, err
 }
 
@@ -104,7 +111,7 @@ func (tw *TreeWatcher) Create(path connector.Path, extra *filenode.ExtraPayload)
 					if p.IsDir() {
 						err := tw.Watcher.Add(p.String())
 						if err != nil {
-							fmt.Println("create error", err)
+							tw.Errors <- err
 							return
 						}
 					}
@@ -129,14 +136,12 @@ func (tw *TreeWatcher) Rename(fromPath connector.Path, toPath connector.Path) (*
 	}
 
 	if toPath.IsDir() {
-		fmt.Println("dirrrr")
-		time.Sleep(1 * time.Second)
-		//err1 := tw.Watcher.Add(toPath.String())
-		err = tw.Watcher.Remove(fromPath.String())
+		err = tw.removeWatcherPath(fromPath.String())
 		if err != nil {
-			fmt.Println(toPath.String())
-			fmt.Println(fromPath.String())
-			fmt.Println("!!!!!!!!!!err", err)
+			return nil, errors.New("path not deleted in watchlist")
+		}
+		err = tw.Watcher.Add(toPath.String())
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -179,6 +184,7 @@ func (tw *TreeWatcher) Handler(e event.Event, extras ...*filenode.ExtraPayload) 
 	if err != nil {
 		return nil, err
 	}
+
 	et := makeEventTransaction(*node, e.Type)
 	return et, err
 }
@@ -186,6 +192,7 @@ func (tw *TreeWatcher) Handler(e event.Event, extras ...*filenode.ExtraPayload) 
 func (tw *TreeWatcher) Watch() {
 	for {
 		select {
+
 		case e, ok := <-tw.Watcher.Events:
 			if !ok {
 				return
@@ -197,24 +204,28 @@ func (tw *TreeWatcher) Watch() {
 			if node != nil {
 				sum = node.Meta.Sum
 			}
-			fmt.Println("Event->", e)
 			tw.EventManager.Append(e, sum)
 		case err, ok := <-tw.Watcher.Errors:
+			tw.Errors <- err
 			if !ok {
 				return
 			}
-			fmt.Println("error:", err)
 		}
 	}
 }
 
 func (tw *TreeWatcher) Start() {
-	log.Debug("started!")
+	tw.IgniterReloadCtx, tw.IgniterReloadFunc = context.WithCancel(context.Background())
 	// EventManager's working range
 	ticker := time.NewTicker(2 * time.Second)
+
 	go func() {
 		for {
 			select {
+			case <-tw.IgniterReloadCtx.Done():
+				tw.IgniterReloadCtx, tw.IgniterReloadFunc = context.WithCancel(context.Background())
+				tw.Start()
+				return
 			case _ = <-ticker.C:
 				if tw.EventManager.StackLength() > 0 {
 					newEvents := tw.EventManager.Process()
@@ -224,6 +235,7 @@ func (tw *TreeWatcher) Start() {
 							tw.Errors <- err
 						}
 						tw.Events <- *txn
+
 					}
 				}
 			}
@@ -239,6 +251,34 @@ func (tw *TreeWatcher) Stop() {
 	}
 	close(tw.Events)
 	close(tw.Errors)
+}
+
+func (tw *TreeWatcher) removeWatcherPath(fsPath string) error {
+	/*
+		When you see this function, why use watcher.Remove?
+		You may think we need this function instead;
+		The reason is; When we want to remove a path in watcher, we get an error like this.
+		we encounter `GetFileAttributes:The system cannot find the file specified`
+		As a solution, we generate the watchlist of the watcher again. This way is not good,
+		but the situation needs to be saved.
+	*/
+	var err error
+	var watcher *fsnotify.Watcher
+	watcher, err = fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+	currentPathList := tw.Watcher.WatchList()
+	for i := 0; i < len(currentPathList); i++ {
+		if currentPathList[i] != fsPath {
+			watcher.Add(currentPathList[i])
+		}
+	}
+
+	tw.Watcher.Close()
+	tw.Watcher = watcher
+	tw.IgniterReloadFunc()
+	return nil
 }
 
 func NewPathWatcher(fsPath string) (*TreeWatcher, *EventTransaction, error) {
@@ -269,9 +309,10 @@ func NewPathWatcher(fsPath string) (*TreeWatcher, *EventTransaction, error) {
 		Path:         path,
 		Watcher:      watcher,
 		EventManager: event.NewEventHandler(),
-		Events:       make(chan EventTransaction, 100),
-		Errors:       make(chan error, 100),
+		Events:       make(chan EventTransaction, 10),
+		Errors:       make(chan error, 10),
 	}
+
 	e := event.Event{FromPath: path, Type: event.Create}
 	txn, err := tw.Handler(e)
 	if err != nil {

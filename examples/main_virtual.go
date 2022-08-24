@@ -28,7 +28,7 @@ func textToEventType(text string) (event.Type, error) {
 	return "", errors.New("invalid event type")
 }
 
-func mainx() {
+func main() {
 	var err error
 	var tw watcher.Watcher
 	log.SetLevel(log.DebugLevel)

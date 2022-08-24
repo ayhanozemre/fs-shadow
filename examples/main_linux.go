@@ -7,9 +7,7 @@ import (
 )
 
 func main() {
-
 	// not completed
-
 	log.SetLevel(log.DebugLevel)
 	tw, _, err := watcher.NewFSWatcher("/tmp/fs-shadow")
 
@@ -25,7 +23,7 @@ func main() {
 				case e := <-err:
 					log.Debug("Error->", e)
 				}
-				// tw.PrintTree("TREE")
+				tw.PrintTree("TREE")
 			}
 		}()
 
@@ -35,5 +33,4 @@ func main() {
 		log.Panic(err)
 	}
 	tw.Stop()
-
 }
