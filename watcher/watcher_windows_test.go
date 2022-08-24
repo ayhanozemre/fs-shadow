@@ -1,6 +1,7 @@
 package watcher
 
 import (
+	"context"
 	"github.com/ayhanozemre/fs-shadow/event"
 	"github.com/ayhanozemre/fs-shadow/filenode"
 	connector "github.com/ayhanozemre/fs-shadow/path"
@@ -12,11 +13,11 @@ import (
 	"time"
 )
 
-func Test_LinuxWatcherUseCase(t *testing.T) {
-	testRoot := "/tmp/fs-shadow"
+func Test_WindowsWatcherUseCase(t *testing.T) {
+	testRoot := "fs-shadow-test"
 	_ = os.Mkdir(testRoot, os.ModePerm)
 	tw, _, err := NewPathWatcher(testRoot)
-	assert.Equal(t, nil, err, "linux path watcher creation error")
+	assert.Equal(t, nil, err, "windows path watcher creation error")
 
 	// create folder
 	folderName := "test1"
@@ -33,22 +34,24 @@ func Test_LinuxWatcherUseCase(t *testing.T) {
 	assert.Equal(t, newFolderName, tw.FileTree.Subs[0].Name, "rename:invalid folder name")
 
 	// move to other directory
-	moveDirectory := "/tmp/test1-rename"
+	testRootTmp := "fs-shadow-test-tmp"
+	_ = os.Mkdir(testRootTmp, os.ModePerm)
+	moveDirectory := filepath.Join(testRootTmp, "test1-rename")
 	err = os.Rename(renameFolder, moveDirectory)
 	time.Sleep(3 * time.Second)
 	assert.Equal(t, 0, len(tw.FileTree.Subs), "remove:invalid subs length")
 
 	tw.Stop()
 	_ = os.RemoveAll(testRoot)
-	_ = os.Remove(moveDirectory)
-
+	_ = os.RemoveAll(testRootTmp)
 }
 
-func Test_LinuxWatcherFunctionality(t *testing.T) {
+func Test_WindowsWatcherFunctionality(t *testing.T) {
 	var err error
 	var watcher *fsnotify.Watcher
-	parentPath := "/tmp"
-	testRoot := filepath.Join(parentPath, "fs-shadow")
+	var oldSum string
+	//parentPath := "/tmp"
+	testRoot := "fs-shadow-test"
 	_ = os.Mkdir(testRoot, os.ModePerm)
 
 	path := connector.NewFSPath(testRoot)
@@ -70,6 +73,8 @@ func Test_LinuxWatcherFunctionality(t *testing.T) {
 		Watcher:      watcher,
 		EventManager: event.NewEventHandler(),
 	}
+	tw.IgniterReloadCtx, tw.IgniterReloadFunc = context.WithCancel(context.Background())
+
 	_, err = tw.Create(path, nil)
 	assert.Equal(t, nil, err, "root node creation error")
 
@@ -82,23 +87,26 @@ func Test_LinuxWatcherFunctionality(t *testing.T) {
 
 	// Create file
 	newFile := connector.NewFSPath(filepath.Join(testRoot, "file.txt"))
-	_, _ = os.Create(newFile.String())
+	out, _ := os.Create(newFile.String())
 	_, err = tw.Create(newFile, nil)
 	assert.Equal(t, nil, err, "file node creation error")
 	assert.Equal(t, newFile.Name(), tw.FileTree.Subs[1].Name, "create:invalid file name")
+	out.Close()
 
 	// Rename
 	renameFilePath := connector.NewFSPath(filepath.Join(testRoot, "file-rename.txt"))
-	_ = os.Rename(newFile.String(), renameFilePath.String())
+	err = os.Rename(newFile.String(), renameFilePath.String())
+	assert.Equal(t, nil, err, "rename file creation error")
+
 	_, err = tw.Rename(newFile, renameFilePath)
 	assert.Equal(t, nil, err, "file node rename error")
 	assert.Equal(t, renameFilePath.Name(), tw.FileTree.Subs[1].Name, "rename:filename is not changed")
 
 	// Write
-	renameEventFilePath := renameFilePath.ExcludePath(connector.NewFSPath(parentPath))
+	renameEventFilePath := renameFilePath
 	node := tw.FileTree.Search(renameEventFilePath.String())
 	assert.NotEqual(t, nil, node, "renamed file not found")
-	oldSum := node.Meta.Sum
+	oldSum = node.Meta.Sum
 
 	f, _ := os.OpenFile(renameFilePath.String(), os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	_, err = f.WriteString("test")
@@ -117,11 +125,12 @@ func Test_LinuxWatcherFunctionality(t *testing.T) {
 	var e event.Event
 	// Handler Create
 	handlerTestFile := connector.NewFSPath(filepath.Join(testRoot, "new-file.txt"))
-	_, _ = os.Create(handlerTestFile.String())
+	out, _ = os.Create(handlerTestFile.String())
 	e = event.Event{FromPath: handlerTestFile, Type: event.Create}
 	_, err = tw.Handler(e, nil)
 	assert.Equal(t, nil, err, "handler creation error")
 	assert.Equal(t, handlerTestFile.Name(), tw.FileTree.Subs[1].Name, "handler: filename mismatch error")
+	out.Close()
 
 	// Handler Write
 	oldSum = tw.FileTree.Subs[1].Meta.Sum
@@ -150,5 +159,5 @@ func Test_LinuxWatcherFunctionality(t *testing.T) {
 	assert.Equal(t, nil, err, "handler remove error")
 	assert.Equal(t, len(tw.FileTree.Subs), 1, "handler: root subs length error")
 
-	_ = os.RemoveAll(testRoot)
+	err = os.RemoveAll(testRoot)
 }
