@@ -9,11 +9,9 @@ import (
 func main() {
 	// not completed
 	log.SetLevel(log.DebugLevel)
-
-	tw, _, err := watcher.NewFSWatcher("C:\\TransferChain")
+	tw, _, err := watcher.NewFSWatcher("/tmp/fs-shadow")
 
 	if err == nil {
-		tw.PrintTree("init")
 
 		go func() {
 			ch := tw.GetEvents()
@@ -21,7 +19,7 @@ func main() {
 			for {
 				select {
 				case p := <-ch:
-					log.Debug(fmt.Sprintf("Event-> Name:%s type:%s", p.Name, p.Type.String()))
+					log.Debug(fmt.Sprintf("Event-> Name:%s UUID:%s", p.Name, p.UUID))
 				case e := <-err:
 					log.Debug("Error->", e)
 				}
@@ -31,8 +29,8 @@ func main() {
 
 		done := make(chan bool)
 		<-done
-		tw.Stop()
 	} else {
-		log.Error(err)
+		log.Panic(err)
 	}
+	tw.Stop()
 }

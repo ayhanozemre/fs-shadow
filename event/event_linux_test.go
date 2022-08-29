@@ -121,23 +121,15 @@ func Test_EventQueue(t *testing.T) {
 	handler := newEventHandler()
 	testFolder := "/tmp/fs-shadow"
 	folder := connector.NewFSPath(filepath.Join(testFolder, "test"))
-	folder1 := connector.NewFSPath(filepath.Join(testFolder, "test1"))
-
-	// create test process folder
-	_ = os.Mkdir(testFolder, os.ModePerm)
 
 	// mkdir /tmp/fs-shadow/test
-	_ = os.Mkdir(folder.String(), os.ModePerm)
 	handler.Append(fsnotify.Event{Name: folder.String(), Op: fsnotify.Create}, "1")
 
 	// mv /tmp/fs-shadow/test /tmp/test
 	//_ = os.Remove(folder)
-	_ = os.Mkdir(folder1.String(), os.ModePerm)
 	handler.Append(fsnotify.Event{Name: folder.String(), Op: fsnotify.Rename}, "2")
 
 	// mv /tmp/fs-shadow/test .
-	//_ = os.Remove(folder1)
-	_ = os.Mkdir(folder.String(), os.ModePerm)
 	handler.Append(fsnotify.Event{Name: folder.String(), Op: fsnotify.Create}, "3")
 
 	var results []Event
@@ -147,7 +139,6 @@ func Test_EventQueue(t *testing.T) {
 			break
 		}
 		results = append(results, r...)
-		fmt.Println("x")
 	}
 	expectResult := []Event{
 		{FromPath: folder, Type: Create},
@@ -164,7 +155,4 @@ func Test_EventQueue(t *testing.T) {
 			t.Fatalf(message)
 		}
 	}
-
-	_ = os.RemoveAll(testFolder)
-
 }
