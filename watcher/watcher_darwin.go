@@ -1,6 +1,7 @@
 package watcher
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"strings"
 	"sync"
 	"time"
 )
@@ -22,6 +24,9 @@ type TreeWatcher struct {
 
 	Events chan EventTransaction
 	Errors chan error
+
+	IgniterReloadFunc func()
+	IgniterReloadCtx  context.Context
 
 	sync.Mutex
 	EventManager event.EventHandler
@@ -44,8 +49,8 @@ func (tw *TreeWatcher) PrintTree(label string) {
 	bannerStartLine := fmt.Sprintf("----------------%s----------------", label)
 	bannerEndLine := fmt.Sprintf("----------------%s----------------\n\n", label)
 	fmt.Println(bannerStartLine)
-	//a, _ := json.MarshalIndent(tw.FileTree, "", "  ")
-	a, _ := json.Marshal(tw.FileTree)
+	a, _ := json.MarshalIndent(tw.FileTree, "", "  ")
+	//a, _ := json.Marshal(tw.FileTree)
 	fmt.Println(string(a))
 	fmt.Println(bannerEndLine)
 }
@@ -53,14 +58,6 @@ func (tw *TreeWatcher) PrintTree(label string) {
 func (tw *TreeWatcher) Remove(path connector.Path) (*filenode.FileNode, error) {
 	eventPath := path.ExcludePath(tw.ParentPath)
 	node, err := tw.FileTree.Remove(eventPath)
-	/*
-		if err == nil && node != nil && node.Meta.IsDir {
-			err = tw.Watcher.Remove(path.String())
-			if err != nil {
-				return nil, err
-			}
-		}
-	*/
 	return node, err
 }
 
@@ -113,13 +110,11 @@ func (tw *TreeWatcher) Rename(fromPath connector.Path, toPath connector.Path) (*
 	if err != nil {
 		return nil, err
 	}
-	if node.Meta.IsDir {
-		err = tw.Watcher.Remove(fromPath.String())
+	if toPath.IsDir() {
+		err = tw.reloadWatcherForRename(fromPath.String(), toPath.String())
 		if err != nil {
 			return nil, err
 		}
-
-		err = tw.Watcher.Add(toPath.String())
 	}
 	return node, err
 }
@@ -182,12 +177,6 @@ func (tw *TreeWatcher) Watch() {
 				return
 			}
 			var sum string
-			path := connector.NewFSPath(e.Name)
-			eventPath := path.ExcludePath(tw.ParentPath)
-			node := tw.FileTree.Search(eventPath.ParentPath().String())
-			if node != nil {
-				sum = node.Meta.Sum
-			}
 			tw.EventManager.Append(e, sum)
 		case err, ok := <-tw.Watcher.Errors:
 			tw.Errors <- err
@@ -199,12 +188,17 @@ func (tw *TreeWatcher) Watch() {
 }
 
 func (tw *TreeWatcher) Start() {
-	log.Debug("started!")
+	log.Debug("start!")
+	tw.IgniterReloadCtx, tw.IgniterReloadFunc = context.WithCancel(context.Background())
 	// EventManager's working range
 	ticker := time.NewTicker(2 * time.Second)
 	go func() {
 		for {
 			select {
+			case <-tw.IgniterReloadCtx.Done():
+				tw.IgniterReloadCtx, tw.IgniterReloadFunc = context.WithCancel(context.Background())
+				tw.Start()
+				return
 			case _ = <-ticker.C:
 				if tw.EventManager.StackLength() > 0 {
 					newEvents := tw.EventManager.Process()
@@ -212,6 +206,7 @@ func (tw *TreeWatcher) Start() {
 						txn, err := tw.Handler(e)
 						if err != nil {
 							tw.Errors <- err
+							continue
 						}
 						tw.Events <- *txn
 					}
@@ -233,6 +228,49 @@ func (tw *TreeWatcher) Stop() {
 
 func (tw *TreeWatcher) Restore(tree *filenode.FileNode) {
 	tw.FileTree = tree
+}
+
+func isParentPath(a, b string) bool {
+	aExp := strings.Split(a, "/") // parent possible?
+	bExp := strings.Split(b, "/")
+	if len(aExp) > len(bExp) {
+		return false
+	}
+	for i := 0; i < len(aExp); i++ {
+		if aExp[i] != bExp[i] {
+			return false
+		}
+	}
+	return true
+}
+func (tw *TreeWatcher) reloadWatcherForRename(fromPath string, toPath string) error {
+	log.Debug("reload!")
+	var err error
+	var watcher *fsnotify.Watcher
+	watcher, err = fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+	currentPathList := tw.Watcher.WatchList()
+	for i := 0; i < len(currentPathList); i++ {
+		path := currentPathList[i]
+		if isParentPath(fromPath, path) {
+			//path != toPath && strings.HasPrefix(path, fromPath)
+			path = strings.ReplaceAll(path, fromPath, toPath)
+		}
+		err = watcher.Add(path)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = tw.Watcher.Close()
+	if err != nil {
+		return err
+	}
+	tw.Watcher = watcher
+	tw.IgniterReloadFunc()
+	return nil
 }
 
 func NewPathWatcher(fsPath string) (*TreeWatcher, *EventTransaction, error) {
@@ -264,8 +302,8 @@ func NewPathWatcher(fsPath string) (*TreeWatcher, *EventTransaction, error) {
 		Path:         path,
 		Watcher:      watcher,
 		EventManager: event.NewEventHandler(),
-		Events:       make(chan EventTransaction, 10),
-		Errors:       make(chan error, 10),
+		Events:       make(chan EventTransaction, 100),
+		Errors:       make(chan error, 100),
 	}
 	e := event.Event{FromPath: path, Type: event.Create}
 	txn, err := tw.Handler(e)

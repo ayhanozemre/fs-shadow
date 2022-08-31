@@ -12,7 +12,6 @@ func main() {
 	tw, _, err := watcher.NewFSWatcher("/tmp/fs-shadow")
 
 	if err == nil {
-
 		go func() {
 			ch := tw.GetEvents()
 			err := tw.GetErrors()
@@ -26,7 +25,6 @@ func main() {
 				tw.PrintTree("TREE")
 			}
 		}()
-
 		done := make(chan bool)
 		<-done
 	} else {
