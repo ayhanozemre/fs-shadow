@@ -29,8 +29,8 @@ func main() {
 
 		done := make(chan bool)
 		<-done
+		tw.Stop()
 	} else {
-		log.Panic(err)
+		log.Error(err)
 	}
-	tw.Stop()
 }

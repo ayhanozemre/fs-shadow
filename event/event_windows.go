@@ -37,10 +37,6 @@ func (e *EventManager) Pop() fsnotify.Event {
 }
 
 func (e *EventManager) isCreate(e1, e2, e3, e4, e5, e6 *fsnotify.Event, e1Sum, e2Sum string) (*Event, int) {
-	//_, e1FileErr := os.Stat(e1.Name)
-
-	//_, e5FileErr := os.Stat(e5.Name)
-
 	if e1.Op == fsnotify.Create &&
 		e2 != nil && e2.Op == fsnotify.Write &&
 		e3 != nil && e3.Op == fsnotify.Rename &&
@@ -48,7 +44,7 @@ func (e *EventManager) isCreate(e1, e2, e3, e4, e5, e6 *fsnotify.Event, e1Sum, e
 		e5 != nil && e5.Op == fsnotify.Write &&
 		e6 != nil && e6.Op == fsnotify.Write &&
 		e1.Name == e3.Name && e4.Name == e6.Name {
-		log.Debug("extreme create")
+		log.Debug("create-case-1")
 		return &Event{FromPath: connector.NewFSPath(e6.Name), Type: Create}, 6
 	}
 
@@ -58,29 +54,29 @@ func (e *EventManager) isCreate(e1, e2, e3, e4, e5, e6 *fsnotify.Event, e1Sum, e
 		e4 != nil && e4.Op == fsnotify.Create &&
 		e5 != nil && e5.Op == fsnotify.Write &&
 		e1.Name == e3.Name {
-		log.Debug("extreme create22")
+		log.Debug("create-case-2")
 		return &Event{FromPath: connector.NewFSPath(e4.Name), Type: Create}, 5
 	}
 
 	if e1.Op == fsnotify.Create {
 		if e2 == nil {
-			log.Debug("create1")
+			log.Debug("create-case-3")
 			return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Create}, 1
 		} else if e2.Op == fsnotify.Rename && e1Sum == e2Sum &&
 			e3 != nil && e3.Op == fsnotify.Create &&
 			e4 != nil && e4.Op == fsnotify.Write &&
 			e3.Name == e4.Name {
-			log.Debug("create3xxx")
+			log.Debug("create-case-4")
 			return &Event{FromPath: connector.NewFSPath(e4.Name), Type: Create}, 4
 
 		} else if e2.Op == fsnotify.Write && e1.Name == e2.Name {
-			log.Debug("create3")
+			log.Debug("create-case-5")
 			return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Create}, 2
 		} else if e2.Op == fsnotify.Rename && e1.Name == e2.Name {
-			log.Debug("create2")
+			log.Debug("create-case-6")
 			return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Create}, 2
 		} else {
-			log.Debug("create6")
+			log.Debug("create-case-7")
 			return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Create}, 1
 		}
 		/*
@@ -94,12 +90,12 @@ func (e *EventManager) isCreate(e1, e2, e3, e4, e5, e6 *fsnotify.Event, e1Sum, e
 
 func (e *EventManager) isRemove(e1, e2 *fsnotify.Event, e1sum, e2sum string) (*Event, int) {
 	if e1.Op == fsnotify.Remove && e2 != nil && e2.Op == fsnotify.Remove && e1.Name == e2.Name {
-		log.Debug("remove1")
+		log.Debug("remove-case-1")
 		return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Remove}, 2
 	}
 
 	if e1.Op == fsnotify.Remove {
-		log.Debug("remove2")
+		log.Debug("remove-case-2")
 		return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Remove}, 1
 	}
 	return nil, 0
@@ -110,21 +106,21 @@ func (e *EventManager) isRename(e1, e2, e3, e4, e5 *fsnotify.Event) (*Event, int
 		if e2 != nil && e2.Op == fsnotify.Create && e3 != nil && e3.Op == fsnotify.Write &&
 			e4 != nil && e4.Op == fsnotify.Write && e5 != nil && e5.Op == fsnotify.Write &&
 			e2.Name == e4.Name && e2.Name == e5.Name {
-			log.Debug("rename9")
+			log.Debug("rename-case-1")
 			return &Event{FromPath: connector.NewFSPath(e1.Name), ToPath: connector.NewFSPath(e5.Name), Type: Rename}, 5
 		}
 
 		if e2 != nil && e2.Op == fsnotify.Create && e3 != nil && e3.Op == fsnotify.Write && e2.Name == e3.Name {
 
 			if e4 != nil && e4.Op == fsnotify.Write && e3.Name == e4.Name {
-				log.Debug("rename111")
+				log.Debug("rename-case-2")
 				return &Event{FromPath: connector.NewFSPath(e1.Name), ToPath: connector.NewFSPath(e2.Name), Type: Rename}, 4
 			} else {
-				log.Debug("rename1")
+				log.Debug("rename-case-3")
 				return &Event{FromPath: connector.NewFSPath(e1.Name), ToPath: connector.NewFSPath(e2.Name), Type: Rename}, 3
 			}
 		} else if e2 != nil && e2.Op == fsnotify.Create && e1.Name != e2.Name {
-			log.Debug("rename2")
+			log.Debug("rename-case-4")
 			return &Event{FromPath: connector.NewFSPath(e1.Name), ToPath: connector.NewFSPath(e2.Name), Type: Rename}, 2
 		}
 	}
