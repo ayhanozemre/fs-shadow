@@ -41,7 +41,7 @@ func (e *EventManager) Pop() fsnotify.Event {
 	return event
 }
 
-func (e *EventManager) isCreate(e1, e2, e3, e4, e5, e6 *fsnotify.Event, e1Sum, e2Sum string) (*Event, int) {
+func (e *EventManager) isCreate(e1, e2, _, _, _, _ *fsnotify.Event, e1Sum, e2Sum string) (*Event, int) {
 	_, e1FileErr := os.Stat(e1.Name)
 
 	if e1.Op == fsnotify.Create {
@@ -94,7 +94,7 @@ func (e *EventManager) isRemove(e1, e2 *fsnotify.Event, e1Sum, e2Sum string) (*E
 	return nil, 0
 }
 
-func (e *EventManager) isRename(e1, e2, e3, e4, e5 *fsnotify.Event) (*Event, int) {
+func (e *EventManager) isRename(e1, e2, e3, _, _ *fsnotify.Event) (*Event, int) {
 	if e1.Op == fsnotify.Rename {
 		if e2 != nil && e2.Op == fsnotify.Create && e3 != nil && e3.Op == fsnotify.Rename && e1.Name == e3.Name {
 			// This case will happen when you rename a folder added to watcher.

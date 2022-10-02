@@ -219,29 +219,31 @@ func (tw *TreeWatcher) Start() {
 	// EventManager's working range
 	ticker := time.NewTicker(2 * time.Second)
 
-	go func() {
-		for {
-			select {
-			case <-tw.IgniterReloadCtx.Done():
-				tw.IgniterReloadCtx, tw.IgniterReloadFunc = context.WithCancel(context.Background())
-				tw.Start()
-				return
-			case _ = <-ticker.C:
-				if tw.EventManager.StackLength() > 0 {
-					newEvents := tw.EventManager.Process()
-					for _, e := range newEvents {
-						txn, err := tw.Handler(e)
-						if err != nil {
-							tw.Errors <- err
-						}
-						tw.Events <- *txn
+	go tw.start(ticker)
+	go tw.Watch()
+}
 
+func (tw *TreeWatcher) start(ticker *time.Ticker) {
+	for {
+		select {
+		case <-tw.IgniterReloadCtx.Done():
+			tw.IgniterReloadCtx, tw.IgniterReloadFunc = context.WithCancel(context.Background())
+			tw.Start()
+			return
+		case _ = <-ticker.C:
+			if tw.EventManager.StackLength() > 0 {
+				newEvents := tw.EventManager.Process()
+				for _, e := range newEvents {
+					txn, err := tw.Handler(e)
+					if err != nil {
+						tw.Errors <- err
 					}
+					tw.Events <- *txn
+
 				}
 			}
 		}
-	}()
-	go tw.Watch()
+	}
 }
 
 func (tw *TreeWatcher) Stop() {
@@ -271,11 +273,11 @@ func (tw *TreeWatcher) removeWatcherPath(fsPath string) error {
 	currentPathList := tw.Watcher.WatchList()
 	for i := 0; i < len(currentPathList); i++ {
 		if currentPathList[i] != fsPath {
-			watcher.Add(currentPathList[i])
+			_ = watcher.Add(currentPathList[i])
 		}
 	}
 
-	tw.Watcher.Close()
+	_ = tw.Watcher.Close()
 	tw.Watcher = watcher
 	tw.IgniterReloadFunc()
 	return nil

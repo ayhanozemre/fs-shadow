@@ -202,24 +202,27 @@ func (tw *TreeWatcher) Start() {
 	log.Debug("started!")
 	// EventManager's working range
 	ticker := time.NewTicker(2 * time.Second)
-	go func() {
-		for {
-			select {
-			case _ = <-ticker.C:
-				if tw.EventManager.StackLength() > 0 {
-					newEvents := tw.EventManager.Process()
-					for _, e := range newEvents {
-						txn, err := tw.Handler(e)
-						if err != nil {
-							tw.Errors <- err
-						}
-						tw.Events <- *txn
+
+	go tw.start(ticker)
+	go tw.Watch()
+}
+
+func (tw *TreeWatcher) start(ticker *time.Ticker) {
+	for {
+		select {
+		case _ = <-ticker.C:
+			if tw.EventManager.StackLength() > 0 {
+				newEvents := tw.EventManager.Process()
+				for _, e := range newEvents {
+					txn, err := tw.Handler(e)
+					if err != nil {
+						tw.Errors <- err
 					}
+					tw.Events <- *txn
 				}
 			}
 		}
-	}()
-	go tw.Watch()
+	}
 }
 
 func (tw *TreeWatcher) Stop() {

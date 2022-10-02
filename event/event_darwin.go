@@ -37,14 +37,14 @@ func (e *EventManager) Pop() fsnotify.Event {
 	return event
 }
 
-func (e *EventManager) isCreate(e1, e2, e3, e4, e5, e6 *fsnotify.Event, e1Sum, e2Sum string) (*Event, int) {
+func (e *EventManager) isCreate(e1, e2, _, _, _, _ *fsnotify.Event, _, _ string) (*Event, int) {
 	if e1.Op == fsnotify.Create && e2 != nil && e2.Op == fsnotify.Remove|fsnotify.Rename {
 		log.Debug("create-case-1")
-		return nil, 0
+		return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Create}, 2
 	}
 	if e1.Op == fsnotify.Create && e2 != nil && e2.Op == fsnotify.Rename {
 		log.Debug("create-case-2")
-		return nil, 0
+		return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Create}, 2
 	}
 	if e1.Op == fsnotify.Create {
 		log.Debug("create-case-3")
@@ -54,7 +54,7 @@ func (e *EventManager) isCreate(e1, e2, e3, e4, e5, e6 *fsnotify.Event, e1Sum, e
 	return nil, 0
 }
 
-func (e *EventManager) isRemove(e1, e2 *fsnotify.Event, e1Sum, e2Sum string) (*Event, int) {
+func (e *EventManager) isRemove(e1, _ *fsnotify.Event, _, _ string) (*Event, int) {
 
 	if e1.Op == fsnotify.Remove {
 		log.Debug("remove-case-1")
@@ -80,7 +80,7 @@ func (e *EventManager) isRemove(e1, e2 *fsnotify.Event, e1Sum, e2Sum string) (*E
 	return nil, 0
 }
 
-func (e *EventManager) isRename(e1, e2, e3, e4, e5 *fsnotify.Event) (*Event, int) {
+func (e *EventManager) isRename(e1, e2, _, _, _ *fsnotify.Event) (*Event, int) {
 	if e1.Op == fsnotify.Create && e2 != nil && e2.Op == fsnotify.Remove|fsnotify.Rename {
 		log.Debug("rename-case-1")
 		return &Event{FromPath: connector.NewFSPath(e2.Name), ToPath: connector.NewFSPath(e1.Name), Type: Rename}, 2

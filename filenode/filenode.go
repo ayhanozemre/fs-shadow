@@ -16,9 +16,9 @@ import (
 type FileNode struct {
 	Subs       []*FileNode `json:"subs"`
 	Name       string      `json:"name"`
-	UUID       string      `json:"-"`
-	ParentUUID string      `json:"-"`
-	Meta       MetaData    `json:"-"`
+	UUID       string      `json:"uuid"`
+	ParentUUID string      `json:"parent_uuid"`
+	Meta       MetaData    `json:"meta"`
 }
 
 func (fn *FileNode) Move(fromPath connector.Path, toPath connector.Path) (*FileNode, error) {
@@ -31,6 +31,7 @@ func (fn *FileNode) Move(fromPath connector.Path, toPath connector.Path) (*FileN
 	if err != nil {
 		return nil, err
 	}
+	node.ParentUUID = toNode.UUID
 	toNode.Subs = append(toNode.Subs, node)
 	return node, nil
 }
