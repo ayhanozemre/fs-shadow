@@ -95,7 +95,7 @@ func (e *EventManager) isRename(e1, e2, _, _, _ *fsnotify.Event) (*Event, int) {
 func (e *EventManager) isWrite(e1 *fsnotify.Event) (*Event, int) {
 	if e1.Op == fsnotify.Write {
 		log.Debug("write-case-1")
-		return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Rename}, 1
+		return &Event{FromPath: connector.NewFSPath(e1.Name), Type: Write}, 1
 	}
 	return nil, 0
 }
