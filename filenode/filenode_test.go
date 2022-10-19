@@ -168,7 +168,7 @@ func Test_FileNode(t *testing.T) {
 func Test_UpdateWithExtra(t *testing.T) {
 	node := FileNode{Name: "test", UUID: uuid.NewString()}
 	newUUID := uuid.NewString()
-	node.UpdateWithExtra(ExtraPayload{UUID: newUUID})
+	node.UpdateWithExtra(ExtraPayload{UUID: newUUID, Size: 1024})
 	assert.Equal(t, newUUID, node.UUID, "uuid not updating")
 }
 

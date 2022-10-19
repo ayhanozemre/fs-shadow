@@ -94,6 +94,7 @@ func (fn *FileNode) Update(fromPath connector.Path, absolutePath connector.Path)
 func (fn *FileNode) UpdateWithExtra(extra ExtraPayload) {
 	fn.UUID = extra.UUID
 	fn.Meta.IsDir = extra.IsDir
+	fn.Meta.Size = extra.Size
 }
 
 func (fn *FileNode) Create(fromPath connector.Path, absolutePath connector.Path, ch ...chan connector.Path) (*FileNode, error) {

@@ -12,4 +12,5 @@ type ExtraPayload struct {
 	UUID         string
 	AbsolutePath string
 	IsDir        bool
+	Size         int64
 }
