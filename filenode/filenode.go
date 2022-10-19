@@ -95,6 +95,9 @@ func (fn *FileNode) UpdateWithExtra(extra ExtraPayload) {
 	fn.UUID = extra.UUID
 	fn.Meta.IsDir = extra.IsDir
 	fn.Meta.Size = extra.Size
+	fn.Meta.Sum = extra.Sum
+	fn.Meta.CreatedAt = extra.CreatedAt
+	fn.Meta.Permission = extra.Permission
 }
 
 func (fn *FileNode) Create(fromPath connector.Path, absolutePath connector.Path, ch ...chan connector.Path) (*FileNode, error) {
@@ -116,6 +119,13 @@ func (fn *FileNode) Create(fromPath connector.Path, absolutePath connector.Path,
 			wg.Wait()
 		}
 		return fn, nil
+	}
+
+	// validation
+	for _, subNode := range parentNode.Subs {
+		if subNode.Name == fromPath.Name() {
+			return nil, errors.New("this file already exist")
+		}
 	}
 
 	var _uuid string

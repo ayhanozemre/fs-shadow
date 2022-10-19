@@ -9,8 +9,10 @@ type MetaData struct {
 }
 
 type ExtraPayload struct {
-	UUID         string
-	AbsolutePath string
-	IsDir        bool
-	Size         int64
+	UUID       string
+	IsDir      bool
+	Sum        string
+	Size       int64
+	CreatedAt  int64
+	Permission string
 }
