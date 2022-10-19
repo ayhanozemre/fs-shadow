@@ -28,14 +28,15 @@ func CreateFileNodeWithTransactions(tbl [][]byte) (*filenode.FileNode, error) {
 				parent.Subs = append(parent.Subs, node)
 			}
 		case event.Rename:
-			_node := uuidTable[node.UUID]
-			_node.Name = node.Name
-			_node.Meta = node.Meta
+			currentNode := uuidTable[node.UUID]
+			currentNode.Name = node.Name
+			currentNode.Meta = node.Meta
 		case event.Move:
-			_node := uuidTable[node.UUID]
-			_, _ = root.RemoveByUUID(_node.UUID, _node.ParentUUID)
+			currentNode := uuidTable[node.UUID]
+			_, _ = root.RemoveByUUID(currentNode.UUID, currentNode.ParentUUID)
 			if parent, ok := uuidTable[node.ParentUUID]; ok {
-				parent.Subs = append(parent.Subs, _node)
+				currentNode.ParentUUID = node.ParentUUID
+				parent.Subs = append(parent.Subs, currentNode)
 			}
 		case event.Remove:
 			delete(uuidTable, node.UUID)
