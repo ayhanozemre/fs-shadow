@@ -11,7 +11,7 @@ import (
 	"sync"
 )
 
-type VirtualTree struct {
+type TreeWatcher struct {
 	FileTree   *filenode.FileNode
 	Path       connector.Path
 	ParentPath connector.Path
@@ -19,19 +19,19 @@ type VirtualTree struct {
 	sync.Mutex
 }
 
-func (tw *VirtualTree) GetEvents() <-chan EventTransaction {
+func (tw *TreeWatcher) GetEvents() <-chan EventTransaction {
 	return nil
 }
 
-func (tw *VirtualTree) GetErrors() <-chan error {
+func (tw *TreeWatcher) GetErrors() <-chan error {
 	return nil
 }
 
-func (tw *VirtualTree) SearchByPath(path string) *filenode.FileNode {
+func (tw *TreeWatcher) SearchByPath(path string) *filenode.FileNode {
 	return nil
 }
 
-func (tw *VirtualTree) PrintTree(label string) {
+func (tw *TreeWatcher) PrintTree(label string) {
 	bannerStartLine := fmt.Sprintf("----------------%s----------------", label)
 	bannerEndLine := fmt.Sprintf("----------------%s----------------\n\n", label)
 	fmt.Println(bannerStartLine)
@@ -40,39 +40,39 @@ func (tw *VirtualTree) PrintTree(label string) {
 	fmt.Println(bannerEndLine)
 }
 
-func (tw *VirtualTree) Create(path connector.Path, extra *filenode.ExtraPayload) (*filenode.FileNode, error) {
+func (tw *TreeWatcher) Create(path connector.Path, extra *filenode.ExtraPayload) (*filenode.FileNode, error) {
 	return nil, nil
 }
 
-func (tw *VirtualTree) Remove(path connector.Path) (*filenode.FileNode, error) {
-	return nil, err
-}
-
-func (tw *VirtualTree) Rename(fromPath connector.Path, toPath connector.Path) (*filenode.FileNode, error) {
+func (tw *TreeWatcher) Remove(path connector.Path) (*filenode.FileNode, error) {
 	return nil, nil
 }
 
-func (tw *VirtualTree) Move(fromPath connector.Path, toPath connector.Path) (*filenode.FileNode, error) {
+func (tw *TreeWatcher) Rename(fromPath connector.Path, toPath connector.Path) (*filenode.FileNode, error) {
 	return nil, nil
 }
 
-func (tw *VirtualTree) Write(path connector.Path) (*filenode.FileNode, error) {
+func (tw *TreeWatcher) Move(fromPath connector.Path, toPath connector.Path) (*filenode.FileNode, error) {
 	return nil, nil
 }
 
-func (tw *VirtualTree) Stop() {
+func (tw *TreeWatcher) Write(path connector.Path) (*filenode.FileNode, error) {
+	return nil, nil
+}
+
+func (tw *TreeWatcher) Stop() {
 	log.Debug("close not implemented ")
 }
 
-func (tw *VirtualTree) Start() {
+func (tw *TreeWatcher) Start() {
 	log.Debug("start not implemented ")
 }
 
-func (tw *VirtualTree) Watch() {
+func (tw *TreeWatcher) Watch() {
 	log.Debug("watch not implemented ")
 }
 
-func (tw *VirtualTree) Handler(e event.Event, extras ...*filenode.ExtraPayload) (*EventTransaction, error) {
+func (tw *TreeWatcher) Handler(e event.Event, extras ...*filenode.ExtraPayload) (*EventTransaction, error) {
 	tw.Lock()
 	defer tw.Unlock()
 	var err error
@@ -111,10 +111,10 @@ func (tw *VirtualTree) Handler(e event.Event, extras ...*filenode.ExtraPayload) 
 	return et, err
 }
 
-func (tw *VirtualTree) Restore(tree *filenode.FileNode) {
+func (tw *TreeWatcher) Restore(tree *filenode.FileNode) {
 	tw.FileTree = tree
 }
 
-func NewVirtualPathWatcher(virtualPath string, extra *filenode.ExtraPayload) (*VirtualTree, *EventTransaction, error) {
+func NewPathWatcher(virtualPath string, extra *filenode.ExtraPayload) (*TreeWatcher, *EventTransaction, error) {
 	return nil, nil, nil
 }

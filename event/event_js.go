@@ -59,5 +59,5 @@ func (e *EventManager) isWrite(e1 *fsnotify.Event) (*Event, int) {
 // Determining the maximum number of events to be processed;
 //  It is determined by how many events the operating system will send for a file transaction.
 func (e *EventManager) Process() []Event {
-	return newEvents
+	return []Event{}
 }
