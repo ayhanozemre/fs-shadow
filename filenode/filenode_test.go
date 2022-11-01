@@ -1,7 +1,6 @@
 package filenode
 
 import (
-	"fmt"
 	connector "github.com/ayhanozemre/fs-shadow/path"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -193,8 +192,7 @@ func TestMove(t *testing.T) {
 	tree := makeDummyTree()
 	fromPath := connector.NewVirtualPath("alphabet/d", true)
 	toPath := connector.NewVirtualPath("alphabet/a", true)
-	n, err := tree.Move(fromPath, toPath)
-	fmt.Println(n.Name)
+	_, err := tree.Move(fromPath, toPath)
 	node := tree.Search("alphabet/a")
 	assert.Equal(t, nil, err, "move process error")
 	assert.Equal(t, 1, len(node.Subs), "move process error")
