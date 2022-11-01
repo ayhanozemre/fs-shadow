@@ -31,6 +31,10 @@ func (tw *VirtualTree) SearchByPath(path string) *filenode.FileNode {
 	return tw.FileTree.Search(path)
 }
 
+func (tw *VirtualTree) SearchByUUID(uuid string) *filenode.FileNode {
+	return tw.FileTree.SearchByUUID(uuid)
+}
+
 func (tw *VirtualTree) PrintTree(label string) {
 	bannerStartLine := fmt.Sprintf("----------------%s----------------", label)
 	bannerEndLine := fmt.Sprintf("----------------%s----------------\n\n", label)

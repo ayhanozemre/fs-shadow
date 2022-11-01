@@ -31,6 +31,10 @@ func (tw *TreeWatcher) SearchByPath(path string) *filenode.FileNode {
 	return nil
 }
 
+func (tw *TreeWatcher) SearchByUUID(uuid string) *filenode.FileNode {
+	return nil
+}
+
 func (tw *TreeWatcher) PrintTree(label string) {
 	bannerStartLine := fmt.Sprintf("----------------%s----------------", label)
 	bannerEndLine := fmt.Sprintf("----------------%s----------------\n\n", label)
