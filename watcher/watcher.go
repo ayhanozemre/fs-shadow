@@ -16,6 +16,7 @@ type Watcher interface {
 	GetEvents() <-chan EventTransaction
 	Restore(tree *filenode.FileNode)
 	SearchByPath(path string) *filenode.FileNode
+	SearchByUUID(uuid string) *filenode.FileNode
 	Handler(event event.Event, extra ...*filenode.ExtraPayload) (*EventTransaction, error)
 	Create(fromPath connector.Path, extra *filenode.ExtraPayload) (*filenode.FileNode, error)
 	Write(fromPath connector.Path) (*filenode.FileNode, error)

@@ -27,6 +27,12 @@ func (fn *FileNode) Move(fromPath connector.Path, toPath connector.Path) (*FileN
 	if toNode == nil {
 		return nil, errors.New("to FileNode not found")
 	}
+	for _, subNode := range toNode.Subs {
+		if fromPath.Name() == subNode.Name {
+			return nil, errors.New("FileNode already exists")
+		}
+	}
+
 	node, err := fn.Remove(fromPath)
 	if err != nil {
 		return nil, err
@@ -37,10 +43,22 @@ func (fn *FileNode) Move(fromPath connector.Path, toPath connector.Path) (*FileN
 }
 
 func (fn *FileNode) Rename(fromPath connector.Path, toPath connector.Path) (*FileNode, error) {
+	parentNode := fn.Search(fromPath.ParentPath().String())
+	if parentNode == nil {
+		return nil, errors.New("FileNode not found")
+	}
+
+	for _, subNode := range parentNode.Subs {
+		if toPath.Name() == subNode.Name {
+			return nil, errors.New("FileNode already exists")
+		}
+	}
+
 	node := fn.Search(fromPath.String())
 	if node == nil {
-		return node, errors.New("FileNode not found")
+		return nil, errors.New("FileNode not found")
 	}
+
 	node.Name = toPath.Name()
 	return node, nil
 }
