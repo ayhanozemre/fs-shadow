@@ -30,7 +30,7 @@ func (path *VirtualPath) Exists() bool {
 }
 
 func (path *VirtualPath) Name() string {
-	parts := strings.Split(path.String(), "/")
+	parts := strings.Split(path.String(), Separator)
 	lastName := parts[len(parts)-1]
 	return lastName
 }
@@ -40,13 +40,13 @@ func (path *VirtualPath) String() string {
 }
 
 func (path *VirtualPath) ParentPath() Path {
-	parts := strings.Split(path.String(), "/")
-	absolutePath := strings.Join(parts[:len(parts)-1], "/")
+	parts := strings.Split(path.String(), Separator)
+	absolutePath := strings.Join(parts[:len(parts)-1], Separator)
 	return NewVirtualPath(absolutePath, true)
 }
 
 func (path *VirtualPath) ExcludePath(excPath Path) Path {
 	eventAbsolutePath := strings.ReplaceAll(path.String(), excPath.String(), "")
-	eventAbsolutePath = strings.Trim(eventAbsolutePath, "/")
+	eventAbsolutePath = strings.Trim(eventAbsolutePath, Separator)
 	return NewVirtualPath(eventAbsolutePath, path.IsDir())
 }
