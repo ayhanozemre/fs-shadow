@@ -68,8 +68,8 @@ func makeEventTransaction(node filenode.FileNode, event event.Type) *EventTransa
 	}
 }
 
-func NewFSWatcher(fsPath string, extra *filenode.ExtraPayload) (Watcher, *EventTransaction, error) {
-	return NewPathWatcher(fsPath, extra)
+func NewFSWatcher(fsPath string) (Watcher, *EventTransaction, error) {
+	return NewPathWatcher(fsPath)
 }
 
 func NewVirtualWatcher(fsPath string, extra *filenode.ExtraPayload) (Watcher, *EventTransaction, error) {
