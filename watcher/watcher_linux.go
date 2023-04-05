@@ -242,7 +242,7 @@ func (tw *TreeWatcher) Restore(tree *filenode.FileNode) {
 	tw.FileTree = tree
 }
 
-func NewPathWatcher(fsPath string, extra *filenode.ExtraPayload) (*TreeWatcher, *EventTransaction, error) {
+func NewPathWatcher(fsPath string) (*TreeWatcher, *EventTransaction, error) {
 	var err error
 	var watcher *fsnotify.Watcher
 	path := connector.NewFSPath(fsPath)
@@ -275,7 +275,7 @@ func NewPathWatcher(fsPath string, extra *filenode.ExtraPayload) (*TreeWatcher, 
 		Errors:       make(chan error, 10),
 	}
 	e := event.Event{FromPath: path, Type: event.Create}
-	txn, err := tw.Handler(e, extra)
+	txn, err := tw.Handler(e)
 	if err != nil {
 		tw.Errors <- err
 		return nil, nil, err
