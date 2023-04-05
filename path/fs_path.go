@@ -3,7 +3,6 @@ package connector
 import (
 	"fmt"
 	"os"
-	"runtime"
 	"strings"
 )
 
@@ -15,16 +14,7 @@ func NewFSPath(p string) *FSPath {
 	return &FSPath{p: p}
 }
 
-func separator() string {
-	switch o := runtime.GOOS; o {
-	case "windows":
-		return "\\"
-	default:
-		return "/"
-	}
-}
-
-var Separator = separator()
+var Separator = string(os.PathSeparator)
 
 func (path FSPath) IsVirtual() bool {
 	return false

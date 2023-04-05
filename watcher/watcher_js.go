@@ -65,7 +65,7 @@ func (tw *TreeWatcher) Write(path connector.Path) (*filenode.FileNode, error) {
 }
 
 func (tw *TreeWatcher) Stop() {
-	log.Debug("close not implemented ")
+	log.Debug("stop not implemented ")
 }
 
 func (tw *TreeWatcher) Start() {
@@ -119,6 +119,7 @@ func (tw *TreeWatcher) Restore(tree *filenode.FileNode) {
 	tw.FileTree = tree
 }
 
-func NewPathWatcher(virtualPath string, extra *filenode.ExtraPayload) (*TreeWatcher, *EventTransaction, error) {
+func NewPathWatcher(virtualPath string) (*TreeWatcher, *EventTransaction, error) {
+	log.Debug("NewPathWatcher not implemented ")
 	return nil, nil, nil
 }
