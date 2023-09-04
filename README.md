@@ -1,7 +1,5 @@
 # FS-Shadow
 
-![logo](path-to-your-logo-if-you-have-one.png)
-
 `fs-shadow` is a robust and efficient file system watcher that recursively watches all files and folders for changes. Built with compatibility in mind, it functions seamlessly across Windows, Linux, and MacOS. Think of it like `fs-notify`, but with recursive watching capabilities.
 
 ## Features
