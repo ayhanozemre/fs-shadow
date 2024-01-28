@@ -20,14 +20,14 @@ type TreeWatcher struct {
 	Path       connector.Path
 	ParentPath connector.Path
 
-	Events chan EventTransaction
+	Events chan *EventTransaction
 	Errors chan error
 
 	sync.Mutex
 	EventManager event.EventHandler
 }
 
-func (tw *TreeWatcher) GetEvents() <-chan EventTransaction {
+func (tw *TreeWatcher) GetEvents() <-chan *EventTransaction {
 	return tw.Events
 }
 
@@ -222,7 +222,7 @@ func (tw *TreeWatcher) start(ticker *time.Ticker) {
 					if err != nil {
 						tw.Errors <- err
 					}
-					tw.Events <- *txn
+					tw.Events <- txn
 				}
 			}
 		}
@@ -271,7 +271,7 @@ func NewPathWatcher(fsPath string) (*TreeWatcher, *EventTransaction, error) {
 		Path:         path,
 		Watcher:      watcher,
 		EventManager: event.NewEventHandler(),
-		Events:       make(chan EventTransaction, 10),
+		Events:       make(chan *EventTransaction, 10),
 		Errors:       make(chan error, 10),
 	}
 	e := event.Event{FromPath: path, Type: event.Create}
@@ -281,6 +281,6 @@ func NewPathWatcher(fsPath string) (*TreeWatcher, *EventTransaction, error) {
 		return nil, nil, err
 	}
 	tw.Start()
-	tw.Events <- *txn
+	tw.Events <- txn
 	return &tw, txn, nil
 }

@@ -19,7 +19,7 @@ type VirtualTree struct {
 	sync.Mutex
 }
 
-func (tw *VirtualTree) GetEvents() <-chan EventTransaction {
+func (tw *VirtualTree) GetEvents() <-chan *EventTransaction {
 	return nil
 }
 

@@ -13,7 +13,7 @@ type Watcher interface {
 	Watch()
 	PrintTree(label string) // for debug
 	GetErrors() <-chan error
-	GetEvents() <-chan EventTransaction
+	GetEvents() <-chan *EventTransaction
 	Restore(tree *filenode.FileNode)
 	SearchByPath(path string) *filenode.FileNode
 	SearchByUUID(uuid string) *filenode.FileNode
@@ -33,7 +33,7 @@ type EventTransaction struct {
 	Meta       filenode.MetaData
 }
 
-func (t EventTransaction) Encode() ([]byte, error) {
+func (t *EventTransaction) Encode() ([]byte, error) {
 	b, err := msgpack.Marshal(t)
 	if err != nil {
 		return nil, err
