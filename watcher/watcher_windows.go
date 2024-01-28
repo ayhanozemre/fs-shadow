@@ -30,7 +30,7 @@ type TreeWatcher struct {
 	EventManager event.EventHandler
 }
 
-func (tw *TreeWatcher) GetEvents() <-chan EventTransaction {
+func (tw *TreeWatcher) GetEvents() <-chan *EventTransaction {
 	return tw.Events
 }
 
